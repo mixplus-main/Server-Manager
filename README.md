@@ -1,0 +1,2 @@
+# Server-Manager
+PythonでMinecraftサーバーを管理するためのPythonスクリプトです。
