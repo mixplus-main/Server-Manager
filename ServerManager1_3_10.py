@@ -2,6 +2,7 @@ import tkinter as tk
 import subprocess
 import threading
 import importlib
+import time
 import json
 import sys
 import os
@@ -11,17 +12,22 @@ from tkinter import messagebox
 from datetime import datetime
 from tkinter import ttk
 
+
+
+
 class function__:
-    def __init__(self, parent):
+    def __init__(self, parent=None):
+        global win
         self.CONFIG_PATH = "config.json"
-        self.btn_color = "#444444"
-        self.username = "user"
         self.parent = parent
         self.log_boxes = {}
         self.server = None
+        self.username = "user"
+        self.btn_color = "#444444"
         self.bg = "black"
         self.fg = "white"
         self.json = json
+        self.current = {}
         
         self.DEFAULT = {
             "btn_color": "#444444",
@@ -47,6 +53,8 @@ class function__:
             config = self.DEFAULT
         
         
+        
+        
         print("未実装: help\nこれはサーバーの管理目的です。\nファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nedit by MixPlus")
     
     def fix(self):
@@ -65,7 +73,6 @@ class function__:
                 pass
         else:
             pass
-
 
     def color_ch(self):
         global username, fg, bg, btn_color
@@ -147,7 +154,6 @@ class function__:
         
         return self.frame
     
-    
     def agree(self):
         try:
             with open("eula.txt", "w", encoding="utf-8") as self.file:
@@ -157,7 +163,6 @@ class function__:
         except Exception as e:
             print("eula.txt 書き込みエラー:", e)
             self.add_log(f"eula.txt 書き込みエラー:{e}")
-    
     
     def load_config(self):
             
@@ -192,7 +197,8 @@ class function__:
     
     def auto_sync(self):
         global username, fg, bg, btn_color
-        self.current = {}
+        
+        
         # セーブ
         try:
             self.current = {k: e.get() for k, e in self.entries.items()}
@@ -275,11 +281,11 @@ class function__:
         
         # --- サーバーJAR ---
         tk.Label(self.frame, text="サーバーJARファイル:", bg=self.bg, fg=self.fg, font=("arial", 12)).place(x=50, y=60)
-        jar_entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
-        jar_entry.insert(0, self.config.get("server_jar", ""))
-        jar_entry.place(x=250, y=60)
-        self.entries["server_jar"] = jar_entry
-        global save_log, save_state
+        self.jar_entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
+        self.jar_entry.insert(0, self.config.get("server_jar", ""))
+        self.jar_entry.place(x=250, y=60)
+        self.entries["server_jar"] = self.jar_entry
+
         self.save_state = tk.BooleanVar(value=self.config.get("save_log", False))
         
         tk.Label(self.frame, text="ログの自動保存", bg=self.bg, fg=self.fg, font=("arial", 12)).place(x=50, y=380)
@@ -311,29 +317,21 @@ class function__:
         
         self.auto_sync()
         return self.frame
-    
-    def on_enter(self, event=None):
-            self.cmd = self.box.get().strip()
-            if not self.cmd:
-                return
-            
-            # log_boxにコマンドを色付きで表示
-            self.main_log_box.config(state="normal")
-            self.main_log_box.tag_config("command", foreground="#15FF00", font=("arial", 12), background=self.bg)  # コマンドの色を黄色に
-            self.main_log_box.insert("end", f"<{self.username}> {self.cmd}\n", "command")
-            self.main_log_box.see("end")
-            self.main_log_box.config(state="disabled")
-            if self.server and self.server.stdin:
-                self.server.stdin.write(self.cmd + "\n")
-                self.server.stdin.flush()
-            else:
-                self.main_log_box.insert("end", f"[WARN] サーバーが起動していません。\n", "command")
-                self.main_log_box.see("end")
-                self.main_log_box.config(state="disabled")
-            
-            self.send_command(self.cmd)  # サーバーに送信
-            self.box.delete(0, tk.END)  # 入力欄クリア
         
+        
+        
+        # Mainタブのログに表示
+        self.main_log_box.config(state="normal")
+        self.main_log_box.insert("end", f"<{self.username}> {self.cmd}\n", "command")
+        self.main_log_box.see("end")
+        self.main_log_box.config(state="disabled")
+        
+        # サーバーに送信
+        self.send_command(self.cmd)
+        
+        # 入力欄クリア
+        self.box.delete(0, tk.END)
+    
     def main_tab(self, parent):
         self.frame = tk.Frame(self.parent, bg=self.bg)
         self.frame.config(bg=self.bg)
@@ -344,7 +342,7 @@ class function__:
         self.label.pack()
         
         # ログ表示用ボックス
-        self.main_log_box = tk.Text(self.frame, bg=self.bg, fg=self.fg, font=("Consolas", 10), state="disabled")
+        self.main_log_box = tk.Text(self.frame, bg=self.bg, fg=self.fg, font=("arial", 13), state="disabled")
         self.main_log_box.place(x=0, y=30, width=900, height=400)
         self.log_boxes['main'] = self.main_log_box
         # スクロールバー
@@ -355,11 +353,45 @@ class function__:
         # --- コマンド送信用エントリ ---
         
         
-        self.box = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
-        self.box.place(y=440, x=0)
-        self.box.bind("<Return>", self.on_enter)  # Enterキーで送信
+        self.entry_cmd = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
+        self.entry_cmd.place(y=440, x=0)
+        self.entry_cmd.bind("<Return>", self.on_enter)
+        self.entry_cmd.delete(0, tk.END)
         
-        return self.frame, self.box, self.main_log_box
+        return self.frame, self.entry_cmd, self.main_log_box
+    
+    def on_enter(self, event=None):
+        # Entry からコマンド取得
+        cmd = self.entry_cmd.get().strip()  # Entry なので get() に引数不要
+        if not cmd:
+            return
+        self.main_log_box.config(state="normal")
+        self.main_log_box.insert("end", f"<{self.username}> {cmd}\n")
+        print(f"<{self.username}> {cmd}\n")
+        self.main_log_box.see("end")
+        self.main_log_box.config(state="disabled")
+        
+        self.send_command(cmd)
+        
+        self.entry_cmd.delete(0, tk.END)
+    
+    def read_output(self):
+        log_box = self.main_log_box
+        for line in iter(self.server.stdout.readline, ''):
+            line = line.strip()
+            log_box.config(state="normal")
+            log_box.insert("end", line + "\n")
+            log_box.see("end")
+            log_box.config(state="disabled")
+            print(line)
+            self.add_log(line, "None", "help")
+                
+            if self.save_state.get():
+                today = datetime.now().strftime("%Y-%m-%d")
+                path = f"Manager_log/{today}.txt"
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+                with open(path, "a", encoding="utf-8") as f:
+                    f.write(f"{line}\n")
     
     def credits_tab(self, parent):
         self.frame = tk.Frame(self.parent, bg=self.bg)
@@ -522,38 +554,7 @@ class function__:
         self.add_log("[INFO] サーバー起動中...")
         self.add_log("[INFO] サーバー起動中...", "None", "help")
         threading.Thread(target=self.read_output, daemon=True).start()
-    
-    def read_output(self):
-        self.box = self.log_boxes.get("main")  # mainタブのログボックスを使う
-        if not self.box:
-            return
-        
-        self.box.tag_config("error", foreground="red")
-        self.box.tag_config("info", foreground="cyan")
-        
-        for line in iter(self.server.stdout.readline, ''):
-            print("save_state:", save_state.get())
-            self.line = line.strip()
-            self.box.config(state="normal")
-            
-            if "ERROR" in self.line or "Exception" in self.line:
-                self.add_log(f"{self.line}\n", "red", "help")
-                self.box.insert("end", self.line + "\n", "error")
-            elif "INFO" in self.line or "[INFO]" in self.line:
-                self.add_log(f"{self.line}\n", "white", "help")
-                self.box.insert("end", self.line + "\n", "info")
-            else:
-                self.add_log(f"{self.line}\n", "blue", "help")
-                self.box.insert("end", self.line + "\n")
-            
-            if save_state.get(self):
-                self.today = datetime.now().strftime("%Y-%m-%d")
-                self.path = f"Manager_log/{self.today}.txt"
-                os.makedirs(os.path.dirname(self.path), exist_ok=True)
-                with open(self.path, "a", encoding="utf-8") as f:
-                    f.write(f"{line}\n")
-            self.box.see("end")
-            self.box.config(state="disabled")
+        #self.server.terminate()
     
     def send_command(self, cmd: str):
         if self.server and self.server.stdin:
@@ -572,14 +573,16 @@ class function__:
             return
         
         try:
+            self.send_command("/stop")
             self.add_log("[INFO] サーバーを強制停止中...", "red")
             self.add_log("[INFO] サーバーを強制停止中...", "red", "help")
-            self.terminate()  # 強制終了
-            self.server.wait(timeout=10)
+            win.after(10000, lambda: self.server.terminate() if self.server.poll() is None else None)
+            #self.server.terminate()
+            #self.server.wait(timeout=10)
             self.add_log("[INFO] サーバーを停止しました。", "yellow")
             self.add_log("[INFO] サーバーを停止しました。", "yellow", "help")
         except Exception as e:
-            self.pend_log(f"[ERROR] サーバー停止に失敗: {e}")
+            self.add_log(f"[ERROR] サーバー停止に失敗: {e}")
         finally:
             self.server = None
     
@@ -602,7 +605,7 @@ class function__:
     def config_reset(self):
         with open(function.CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.DEFAULT, f, indent=7, ensure_ascii=False)
-        
+        self.app()
         return self.DEFAULT
 
     def load_Extensions(self, window):
@@ -633,6 +636,8 @@ class function__:
                     print(f"Error loading extension {self.extension_name}: {e}")
                     self.add_log(f"Error loading extension {self.extension_name}: {e}", "red", "help")
                     self.add_log(f"Error loading extension {self.extension_name}: {e}", "red", "main")
+
+
 
 if __name__ == "__main__":
     win = tk.Tk()
@@ -699,10 +704,7 @@ if __name__ == "__main__":
     
     function.show_frame(frame_main)
     
-    app = function__(win)
     
-    # 最初に Main タブを表示
-    app.main_tab(win)
     
     function.load_Extensions(win)
     
