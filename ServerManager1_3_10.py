@@ -56,10 +56,25 @@ class function__:
         
         
         print("未実装: help\nこれはサーバーの管理目的です。\nファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nedit by MixPlus")
+        
+        
+        
+        #初期化
+        self.win = win
+        #self.function = function__(win)
+        self.fix()
+        self.win.title("Server Manager Edit By MixPlus")
+        self.win.geometry("910x490")
+        self.win.minsize(910, 490)
+        self.win.configure(bg=f"{self.bg}")
+        self.win.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        
+        self.crate_gui_()
     
     def fix(self):
         try:
-            with open(function.CONFIG_PATH, "r", encoding="utf-8") as f:
+            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
         except Exception as e:
             try:
@@ -609,106 +624,103 @@ class function__:
         return self.DEFAULT
 
     def load_Extensions(self, window):
-        self.extensions_folder = 'Extensions'  # 拡張機能が格納されているフォルダ
-        os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
-        
+        self.extensions_folder = 'Extensions'
+
+        # Extensions/temp.py を想定してフォルダ作成？
+        # 下のようにフォルダだけ作れば十分
+        os.makedirs(self.extensions_folder, exist_ok=True)
+
         if not os.path.exists(self.extensions_folder):
             print(f"{self.extensions_folder} フォルダが存在しません")
             return
-        
-        self.loaded_extensions = set()  # ← ここでセットを作る
+
+        self.loaded_extensions = set()
+
         for filename in os.listdir(self.extensions_folder):
-            if filename.endswith('.py') and filename != "__init__.py":  # __init__.py は除外
+            if filename.endswith('.py') and filename != "__init__.py":
                 self.extension_name = filename[:-3]
-                
-                if self.extension_name in self.loaded_extensions:  # すでにロード済みならスキップ
+
+                if self.extension_name in self.loaded_extensions:
                     continue
                 self.loaded_extensions.add(self.extension_name)
+
                 try:
-                    self.add_log(f"Loaded extension: {self.extension_name}", "green", "help")
-                    self.add_log(f"Loaded extension: {self.extension_name}", "green")
                     print(f"Loaded extension: {self.extension_name}")
-                    self.extension_module = importlib.import_module(f"Extensions.{self.extension_name}")
-                    
+                    self.add_log(f"Loaded extension: {self.extension_name}", "green")
+                    self.add_log(f"Loaded extension: {self.extension_name}", "green", "help")
+                    self.extension_module = importlib.import_module(
+                        f"Extensions.{self.extension_name}"
+                    )
+
                     if hasattr(self.extension_module, "extension_function"):
                         self.extension_module.extension_function(window)
+
                 except Exception as e:
                     print(f"Error loading extension {self.extension_name}: {e}")
-                    self.add_log(f"Error loading extension {self.extension_name}: {e}", "red", "help")
-                    self.add_log(f"Error loading extension {self.extension_name}: {e}", "red", "main")
+    
+    def crate_gui_(self):
+        
+        self.frame_main, self.box_main, self.main_log_box = self.main_tab(win)
+        self.show_frame(self.frame_main)
+        self.frame_credits = self.credits_tab(win)
+        self.frame_mods = self.mods_tab(win)
+        self.frame_plugins = self.plugins_tab(win)
+        self.frame_setting = self.setting_tab(win)
+        self.frame_help = self.help_tab(win)
+        
+        #start
+        self.start_button = tk.Button(self.frame_main, text="サーバー起動", command=self.start_server, bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.start_button.place(x=0, y=2, width=100, height=20)
+        
+        #Main
+        self.btn_main = tk.Button(win, text="Main", command=lambda: self.show_frame(self.frame_main), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.btn_main.place(x=0, y=0, width=100, height=20)
+        
+        #credits
+        self.btn_credits = tk.Button(win, text="Credits", command=lambda: self.show_frame(self.frame_credits), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat",)
+        self.btn_credits.place(x=101, y=0, width=100, height=20)
+        
+        #Mods
+        self.btn_mods = tk.Button(win, text="Mods", command=lambda: self.show_frame(self.frame_mods), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.btn_mods.place(x=202, y=0, width=100, height=20)
+        
+        #plugins
+        self.btn_plugins = tk.Button(win, text="Plugins", command=lambda: self.show_frame(self.frame_plugins), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.btn_plugins.place(x=303, y=0, width=100, height=20)
+        
+        #Settings
+        self.btn_setting = tk.Button(win, text="Setting", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.btn_setting.place(x=404, y=0, width=100, height=20)
+        
+        #stop
+        self.stop_button = tk.Button(self.frame_main, text="サーバー停止", command=self.stop_server, bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.stop_button.place(x=101, y=2, width=100, height=20)
+        
+        #restart
+        self.restart_btn = tk.Button(self.frame_setting, text="GUI再起動", command=self.app, bg=self.btn_color, fg="red", font=("arial", 10))
+        self.restart_btn.place(x=700, y=88, width=80, height=25)
+        
+        #config_reset
+        self.config_reset_btn = tk.Button(self.frame_setting, text="コンフィグリセット", command=self.config_reset, bg=self.btn_color, fg="red", font=("arial", 12))
+        self.config_reset_btn.place(x=758, y=440, width=150, height=25)
+        
+        #help
+        self.btn_help = tk.Button(win, text="Help", command=lambda: self.show_frame(self.frame_help), bg=self.btn_color, fg=self.fg, font=("arial", 12), relief="flat")
+        self.btn_help.place(x=505, y=0, width=100, height=20)
+        
+        self.show_frame(self.frame_main)
 
 
 
 if __name__ == "__main__":
+    
+    
     win = tk.Tk()
     function = function__(win)
-    function.fix()
-    win.title("Server Manager Edit By MixPlus")
-    win.geometry("910x490")
-    win.minsize(910, 490)
-    win.configure(bg=f"{function.bg}")
-    win.protocol("WM_DELETE_WINDOW", function.on_closing)
-    
-    #紐付け
-    frame_main, box_main, main_log_box = function.main_tab(win)
-    function.show_frame(frame_main)
-    frame_credits = function.credits_tab(win)
-    frame_mods = function.mods_tab(win)
-    frame_plugins = function.plugins_tab(win)
-    frame_setting = function.setting_tab(win)
-    frame_help = function.help_tab(win)
-    
-    
-    
-    
-    #start
-    start_button = tk.Button(frame_main, text="サーバー起動", command=function.start_server, bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    start_button.place(x=0, y=2, width=100, height=20)
-    
-    #Main
-    btn_main = tk.Button(win, text="Main", command=lambda: function.show_frame(frame_main), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    btn_main.place(x=0, y=0, width=100, height=20)
-    
-    #credits
-    btn_credits = tk.Button(win, text="Credits", command=lambda: function.show_frame(frame_credits), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat",)
-    btn_credits.place(x=101, y=0, width=100, height=20)
-    
-    #Mods
-    btn_mods = tk.Button(win, text="Mods", command=lambda: function.show_frame(frame_mods), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    btn_mods.place(x=202, y=0, width=100, height=20)
-    
-        #plugins
-    btn_plugins = tk.Button(win, text="Plugins", command=lambda: function.show_frame(frame_plugins), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    btn_plugins.place(x=303, y=0, width=100, height=20)
-    
-    #Settings
-    btn_setting = tk.Button(win, text="Setting", command=lambda: function.show_frame(frame_setting), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    btn_setting.place(x=404, y=0, width=100, height=20)
-    
-    #stop
-    stop_button = tk.Button(frame_main, text="サーバー停止", command=function.stop_server, bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    stop_button.place(x=101, y=2, width=100, height=20)
-    #restart
-    restart_btn = tk.Button(frame_setting, text="GUI再起動", command=function.app, bg=function.btn_color, fg="red", font=("arial", 10))
-    restart_btn.place(x=700, y=88, width=80, height=25)
-    
-    #config_reset
-    config_reset_btn = tk.Button(frame_setting, text="コンフィグリセット", command=function.config_reset, bg=function.btn_color, fg="red", font=("arial", 12))
-    config_reset_btn.place(x=758, y=440, width=150, height=25)
-    
-    #help
-    btn_help = tk.Button(win, text="Help", command=lambda: function.show_frame(frame_help), bg=function.btn_color, fg=function.fg, font=("arial", 12), relief="flat")
-    btn_help.place(x=505, y=0, width=100, height=20)
-    
-    
-    
-    function.show_frame(frame_main)
-    
-    
-    
-    function.load_Extensions(win)
-    
+    #function.load_Extensions(win)
+    win.after(5, lambda: function.load_Extensions(win))
     win.mainloop()
+    
 
 # No Console
 # pyinstaller --onefile --windowed "Server Manager1_3_10.py"
