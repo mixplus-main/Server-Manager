@@ -29,6 +29,7 @@ from tkinter import ttk
 
 class function__:
     def __init__(self):
+        self.VERSION = "1_4_0"
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.CONFIG_PATH = "config.json"
         self.btn_color = "#444444"
@@ -58,6 +59,7 @@ class function__:
                 "fg": "white",
                 "eula": False,
                 "save_log": False,
+                "server": None,
             }
         
         print("未実装: help\nこれはサーバーの管理目的です。\nファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nEdit By MixPlus")
@@ -66,8 +68,7 @@ class function__:
             with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
                 config = json.load(f)
         except Exception as e:
-            self.fix()
-        
+            self.fix_()
         self.color_ch_()
     
     def fix_(self):
@@ -83,6 +84,7 @@ class function__:
             print("サーバーを停止しました。")
         else:
             print("GUIを終了しました。")
+        return
     
     def start_server_(self):
         if self.server is not None:
@@ -150,7 +152,7 @@ class function__:
             self.server = None
     
     def send_command_(self, cmd: str):
-        if "/" in cmd:
+        if cmd.startswith("/"):
             if self.server and self.server.stdin:
                 self.server.stdin.write(cmd + "\n")
                 self.server.stdin.flush()
@@ -396,6 +398,8 @@ class function__:
         return
     
     def load_Extensions(self, window):
+        if self.config.get("server", False):
+            self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
         extensions_folder = 'Extensions'  # 拡張機能が格納されているフォルダ
         os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
         if not os.path.exists(extensions_folder):
@@ -428,7 +432,7 @@ class function__:
             current = {k: e.get() for k, e in self.entries.items()}
             #config save用
             current["save_log"] = self.save_state.get()
-            
+            current["server"] = self.server is not None
             
             latest_config = self.load_config_()
             if "eula" in latest_config:
@@ -528,7 +532,7 @@ class function__:
             lbl.pack(pady=0)
             
         return lbl
-
+    
     def scrollbar_(self):
         # Scrollbar作成
         self.scrollbar_widget = tk.Scrollbar(self.frame, command=self.log_box.yview)
@@ -604,12 +608,16 @@ class function__:
             self.add_log_(f"Server: {self.server}", "#FF00C8")
         elif "help" in cmd:
             self.help_log_("main")
-        elif "." in cmd:
+        elif cmd.startswith("."):
             tell_cmd = f"/say @a [Server] {cmd[1:]}"
             if self.server and self.server.stdin:
                 self.server.stdin.write(tell_cmd + "\n")
                 self.server.stdin.flush()
             self.add_log_(f"<{self.username}> {tell_cmd}", "#00FF1f")
+        elif "command" in cmd:
+            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help")
         # 入力欄クリア
         self.text_box.delete(0, tk.END)
     
@@ -618,7 +626,7 @@ class function__:
         exe = sys.executable
         script = os.path.abspath(sys.argv[0])
         subprocess.Popen([exe, script])  # 新しいプロセスを起動 停止
-        os._exit(0)
+        self.win.destroy()
         return
     
     def config_reset_(self):
