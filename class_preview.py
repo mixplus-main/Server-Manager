@@ -1,23 +1,197 @@
 """
-フレーム
-self.frame_(parent)
+Hello! Thank you for reading this documentation.
 
-ラベル
-self.label_("Main")
+This file explains the basic rules and main APIs
+used in ServerManager extensions.
 
-ログボックス(表示)
-self.log_box_()
-self.log_boxes['main'] = self.log_box
+====================
+Basic Naming Rules
+====================
 
-スクロールバー
-self.scrollbar_()
+- Functions end with an underscore (_)
+  Example: btn_, add_log_
+
+- Classes end with double underscores (__)
+  Example: function__
+
+Important Rules for Extensions
+------------------------------
+
+- Do NOT create a new Tk() window
+- Do NOT call mainloop()
+- Always use the existing manager instance:
+    builtins.FUNC_INSTANCE
+
+
+====================
+Main Functions
+====================
+
+add_log_
+--------
+Displays a message in the log box.
+
+Usage:
+    add_log_("message", "color", "tab_name")
+
+Arguments:
+- message (str): Text to display
+- color (str): Text color (e.g. "blue", "white")
+- tab_name (str): Log tab name (e.g. "main", "help")
+
+
+frame_
+------
+Creates a frame.
+
+Usage:
+    frame_(parent)
+
+Arguments:
+- parent: Parent widget (usually another frame or window)
+
+Note:
+- Usually used internally. No need to modify.
+
+
+label_
+-------
+Creates a label.
+
+Usage:
+    label_(
+        location,
+        "text",
+        bg="background color",
+        fg="font color",
+        font="font",
+        layout_mode="layout mode",
+        x=x,
+        y=y
+    )
+
+Arguments:
+- location: Parent frame
+- text (str): Label text
+- bg (str): Background color
+- fg (str): Font color
+- font: Font setting
+- layout_mode (str): "pack", "place", or "grid"
+
+
+log_box_
+--------
+Creates a log box.
+
+Usage:
+    log_box_()
+    log_boxes["tab_name"] = log_box
+
+Important:
+- You must register the log box using:
+      log_boxes["tab_name"] = log_box
+- Otherwise, messages cannot be sent to that tab.
+
+
+scrollbar_
+-----------
+Creates a scrollbar.
+
+Usage:
+    scrollbar_()
+
+
+listbox_
+---------
+Creates a listbox.
+
+Usage:
+    listbox_(
+        bg="background color",
+        fg="font color",
+        relief=None
+    )
+
+
+btn_
+----
+Creates a button.
+
+Usage:
+    btn_(
+        parent,
+        "text",
+        command=function_to_execute,
+        bg="background color",
+        fg="font color",
+        layout_mode=None,
+        x=x,
+        y=y,
+        row=row,
+        col=col
+    )
+
+Arguments:
+- parent: Parent frame
+- text (str): Button text
+- command: Function to execute when clicked
+- bg (str): Background color
+- fg (str): Font color
+- layout_mode (str):
+    - None or "pack" : pack()
+    - "place"        : uses x, y
+    - "grid"         : uses row, col
 """
+
+"""
+temp Extensions
+# Extensions/temp.py
+import builtins
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ServerManager1_4_0 import function__
+
+id = "temp"
+
+manager: "function__" = builtins.FUNC_INSTANCE
+
+
+def show_temp_frame():
+    # フレーム作成
+    manager.frame_(manager.win)
+    manager.label_("Temp Frame")
+    manager.log_box_()
+    manager.scrollbar_()
+
+    # temp タブとして登録
+    manager.log_boxes["temp"] = manager.log_box
+
+    # フレーム表示
+    manager.show_frame(manager.frame)
+
+    # ログ出力
+    manager.add_log_("temp frame!", "blue", "temp")
+
+
+# ボタン追加（Main などに置く）
+manager.btn_(
+    manager.frame_main,
+    "Temp",
+    command=show_temp_frame,
+    bg=manager.btn_color,
+    fg=manager.fg,
+)
+
+"""
+
 
 
 import tkinter as tk
 import subprocess
 import threading
 import importlib
+import builtins
 import json
 import sys
 import os
@@ -27,8 +201,10 @@ from tkinter import messagebox
 from datetime import datetime
 from tkinter import ttk
 
+
+
 class function__:
-    def __init__(self):
+    def __init__(self, win):
         self.VERSION = "1_4_0"
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.CONFIG_PATH = "config.json"
@@ -62,7 +238,7 @@ class function__:
                 "server": None,
             }
         
-        print("未実装: help\nこれはサーバーの管理目的です。\nファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nEdit By MixPlus")
+        print("ファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nEdit By MixPlus")
         
         try:
             with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
@@ -129,9 +305,6 @@ class function__:
             bufsize=1
         )
         
-        print("[INFO] サーバー起動中...")
-        self.add_log_("[INFO] サーバー起動中...")
-        self.add_log_("[INFO] サーバー起動中...", None, "help")
         threading.Thread(target=self.read_output_, daemon=True).start()
     
     def stop_server_(self):
@@ -237,7 +410,7 @@ class function__:
         #Extensions
         self.btn_(self.frame_setting, "拡張機能", command=lambda: self.show_frame(self.frame_Extensions), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
         #button
-        self.btn_(self.frame_setting, "GUI再起動", command=self.app_, bg=self.btn_color, fg="red", font=("arial", 10), layout_mode="place", x=700, y=88, width=80, height=25)
+        self.btn_(self.frame_setting, "GUI再起動", command=self.app_, bg=self.btn_color, fg="red", font=("arial", 10), layout_mode="place", x=758, y=410, width=150, height=25)
         self.btn_(self.frame_setting, "コンフィグリセット", command=self.config_reset_, bg=self.btn_color, fg="red", layout_mode="place", x=758, y=440, width=150, height=25)
         self.btn_(self.frame_main, "サーバー起動", command=self.start_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=0, y=2, width=100, height=20)
         self.btn_(self.frame_main, "サーバー停止", command=self.stop_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=101, y=2, width=100, height=20)
@@ -400,26 +573,38 @@ class function__:
     def load_Extensions(self, window):
         if self.config.get("server", False):
             self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
+        
         extensions_folder = 'Extensions'  # 拡張機能が格納されているフォルダ
         os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
+        
         if not os.path.exists(extensions_folder):
             print(f"{extensions_folder} フォルダが存在しません")
             return
-        loaded_extensions = set()  # ← ここでセットを作る
+        
+        loaded_extensions = set()  # 重複ロード防止
+        
+        # インスタンスを builtins にセット
+        builtins.FUNC_INSTANCE = self
+
         for filename in os.listdir(extensions_folder):
-            if filename.endswith('.py') and filename != "__init__.py":  # __init__.py は除外
+            if filename.endswith('.py') and filename != "__init__.py":
                 extension_name = filename[:-3]
                 
                 if extension_name in loaded_extensions:  # すでにロード済みならスキップ
                     continue
                 loaded_extensions.add(extension_name)
+                
                 try:
                     self.add_log_(f"Loaded extension: {extension_name}", "green", "help")
                     self.add_log_(f"Loaded extension: {extension_name}", "green")
                     print(f"Loaded extension: {extension_name}")
+                    
                     extension_module = importlib.import_module(f"Extensions.{extension_name}")
-                    if hasattr(extension_module, "extension_function"):
-                        extension_module.extension_function(window)
+                    
+                    # 拡張機能側に init_extension 関数があれば呼ぶ
+                    if hasattr(extension_module, "init_extension"):
+                        extension_module.init_extension()
+                    
                 except Exception as e:
                     print(f"Error loading extension {extension_name}: {e}")
                     self.add_log_(f"Error loading extension {extension_name}: {e}", "red", "help")
@@ -639,8 +824,10 @@ class function__:
 
 if __name__ == "__main__":
     win = tk.Tk()
-    function = function__()
+    function = function__(win) 
     function.gui_()
+    
+    
     function.frame_main.lift()
     function.load_Extensions(win)
     function.win.mainloop()
