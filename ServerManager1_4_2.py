@@ -147,10 +147,10 @@ Arguments:
 temp Extensions
 # Extensions/temp.py
 import builtins
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ServerManager1_4_0 import function__
+
+
+from ServerManager1_4_0 import function__
 
 id = "temp"
 
@@ -831,3 +831,4 @@ if __name__ == "__main__":
     function.frame_main.lift()
     function.load_Extensions(win)
     function.win.mainloop()
+
