@@ -149,8 +149,8 @@ temp Extensions
 import builtins
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ServerManager1_4_0 import function__
+
+from ServerManager1_4_0 import function__
 
 id = "temp"
 
@@ -176,7 +176,7 @@ def show_temp_frame():
 
 # ボタン追加（Main などに置く）
 manager.btn_(
-    manager.frame_main,
+    manager.win,
     "Temp",
     command=show_temp_frame,
     bg=manager.btn_color,
@@ -198,6 +198,7 @@ import os
 from tkinter import scrolledtext
 from tkinter import filedialog
 from tkinter import messagebox
+from collections import deque
 from datetime import datetime
 from tkinter import ttk
 
@@ -216,6 +217,8 @@ class function__:
         self.bg = "black"
         self.fg = "white"
         self.layout_mode = "pack"
+        self.clip = deque(maxlen=2)
+        self.clip_index = 0
         
         self.win = win
         self.win.title("Server Manager Edit By MixPlus")
@@ -423,6 +426,7 @@ class function__:
         self.text_box = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
         self.text_box.place(y=440, x=0)
         self.text_box.bind("<Return>", self.on_enter)
+        self.text_box.bind("<Up>", self.clip_)
         self.log_boxes['main'] = self.log_box
         return self.frame, self.text_box, self.log_box
     
@@ -784,6 +788,10 @@ class function__:
         if not cmd:
             return
         
+        self.clip.append(cmd)
+        self.clip_index = 0
+        print(self.clip)
+        
         # log_boxにコマンドを色付きで表示
         self.add_log_(f"<{self.username}> {cmd}", "#00FF1f")
         #custom command
@@ -805,6 +813,23 @@ class function__:
             self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help")
         # 入力欄クリア
         self.text_box.delete(0, tk.END)
+    
+    def clip_(self, event):
+        if not self.clip:
+            return "break"
+        
+        if self.clip_index < len(self.clip):
+            self.clip_index += 1
+        index = self.clip_index - 1
+        
+        if index >= len(self.clip):
+            index = len(self.clip) - 1
+        
+        cmd = self.clip[index]
+        
+        self.text_box.delete(0, tk.END)
+        self.text_box.insert(0, cmd)
+        return "break"
     
     def app_(self):
         print("再起動します。")
