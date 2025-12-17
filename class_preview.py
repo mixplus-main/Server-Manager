@@ -141,10 +141,10 @@ Arguments:
     - None or "pack" : pack()
     - "place"        : uses x, y
     - "grid"         : uses row, col
-"""
 
-"""
-temp Extensions
+
+
+#temp Extensions
 # Extensions/temp.py
 import builtins
 from typing import TYPE_CHECKING
@@ -163,29 +163,21 @@ def show_temp_frame():
     manager.label_("Temp Frame")
     manager.log_box_()
     manager.scrollbar_()
-
+    
     # temp タブとして登録
     manager.log_boxes["temp"] = manager.log_box
-
+    
     # フレーム表示
     manager.show_frame(manager.frame)
-
+    
     # ログ出力
     manager.add_log_("temp frame!", "blue", "temp")
 
 
 # ボタン追加（Main などに置く）
-manager.btn_(
-    manager.win,
-    "Temp",
-    command=show_temp_frame,
-    bg=manager.btn_color,
-    fg=manager.fg,
-)
+manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color, fg=manager.fg,)
 
 """
-
-
 
 import tkinter as tk
 import subprocess
@@ -203,7 +195,6 @@ from datetime import datetime
 from tkinter import ttk
 
 
-
 class function__:
     def __init__(self, win):
         self.VERSION = "1_4_0"
@@ -212,13 +203,18 @@ class function__:
         self.btn_color = "#444444"
         self.layout_mode = "pack"
         self.username = "user"
+        self.clip_count = 10
         self.log_boxes = {}
         self.server = None
         self.bg = "black"
         self.fg = "white"
-        self.layout_mode = "pack"
-        self.clip = deque(maxlen=2)
+        self.entries = {}
+        
+        
+        
+        
         self.clip_index = 0
+        self.pressed = set()
         
         self.win = win
         self.win.title("Server Manager Edit By MixPlus")
@@ -226,6 +222,8 @@ class function__:
         self.win.minsize(910, 490)
         self.win.configure(bg=f"{self.bg}")
         self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
+        self.win.bind("<KeyPress>", self.key_press_)
+        self.win.bind("<KeyRelease>", self.key_release_)
         
         self.CONFIG = {
                 "btn_color": "#444444",
@@ -239,16 +237,19 @@ class function__:
                 "eula": False,
                 "save_log": False,
                 "server": None,
+                "clip_count": 10,
             }
         
         print("ファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nEdit By MixPlus")
-        
         try:
             with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                config = json.load(f)
+                self.config = json.load(f)
         except Exception as e:
             self.fix_()
+            self.config = self.CONFIG.copy()
         self.color_ch_()
+        self.clip_c = int(self.config.get("clip_c", 10))
+        self.clip = deque(maxlen=self.clip_c)
     
     def fix_(self):
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -391,6 +392,7 @@ class function__:
         self.frame_setting = self.setting_tab_(win)
         self.frame_help = self.help_tab_(win)
         self.frame_Extensions = self.Extensions_tab_(win)
+        self.frame_more_setting = self.more_setting_(win)
         
         #main tab
         self.btn_(win, "Main", command=lambda: self.show_frame(self.frame_main), bg=self.btn_color, fg=self.fg, layout_mode="place", x=0, y=0, width=100, height=20, relief="flat")
@@ -411,13 +413,14 @@ class function__:
         self.btn_(win,"Help", command=lambda: self.show_frame(self.frame_help), bg=self.btn_color, fg=self.fg, layout_mode="place", x=505, y=0, width=100, height=20, relief="flat")
         
         #Extensions
-        self.btn_(self.frame_setting, "拡張機能", command=lambda: self.show_frame(self.frame_Extensions), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
+        self.btn_(self.frame_setting, "拡張機能", command=lambda: self.show_frame(self.frame_Extensions), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=90, width=80, height=25)
         #button
         self.btn_(self.frame_setting, "GUI再起動", command=self.app_, bg=self.btn_color, fg="red", font=("arial", 10), layout_mode="place", x=758, y=410, width=150, height=25)
         self.btn_(self.frame_setting, "コンフィグリセット", command=self.config_reset_, bg=self.btn_color, fg="red", layout_mode="place", x=758, y=440, width=150, height=25)
         self.btn_(self.frame_main, "サーバー起動", command=self.start_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=0, y=2, width=100, height=20)
         self.btn_(self.frame_main, "サーバー停止", command=self.stop_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=101, y=2, width=100, height=20)
-    
+        self.btn_(self.frame_setting, "その他の設定", command=lambda: self.show_frame(self.frame_more_setting, ), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
+    #tab
     def main_tab_(self, parent):
         self.frame_(parent)
         self.label_("Main")
@@ -460,7 +463,7 @@ class function__:
     def mods_tab_(self, parent):
         self.frame_(parent)
         self.label_("Mods List")
-        self.scrollbar_
+        self.scrollbar_()
         self.listbox_()
         mods_path = os.path.join(self.current_dir, "mods")
         if os.path.exists(mods_path):
@@ -473,12 +476,13 @@ class function__:
     def Extensions_tab_(self, parent):
         self.frame_(parent)
         self.label_("Extensions List")
-        self.scrollbar_
+        self.scrollbar_()
         self.listbox_()
         Extensions_path = os.path.join(self.current_dir, "Extensions")
         if os.path.exists(Extensions_path):
-            for item in os.listdir(Extensions_path):
-                self.listbox.insert(tk.END, item)
+            if Extensions_path.endswith('.py') and Extensions_path != "__init__.py":
+                for item in os.listdir(Extensions_path):
+                    self.listbox.insert(tk.END, item)
         else:
             self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
         self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
@@ -487,12 +491,13 @@ class function__:
     def plugins_tab_(self, parent):
         self.frame_(parent)
         self.label_("Plugin List")
-        self.scrollbar_
+        self.scrollbar_()
         self.listbox_()
         plugins_path = os.path.join(self.current_dir, "plugins")
         if os.path.exists(plugins_path):
-            for item in os.listdir(plugins_path):
-                self.listbox.insert(tk.END, item)
+            if plugins_path.endswith('.py') and plugins_path != "__init__.py":
+                for item in os.listdir(plugins_path):
+                    self.listbox.insert(tk.END, item)
         else:
             self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
         return self.frame
@@ -514,7 +519,7 @@ class function__:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
         
         self.config = self.load_config_()
-        self.entries = {}
+        
         
         self.label_("サーバーJARファイル:", layout_mode="place", x=50, y=60)
         self.jar_entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
@@ -555,6 +560,31 @@ class function__:
         self.log_boxes['help'] = self.log_box
         self.help_log_("help")
         return self.frame
+    
+    def more_setting_(self, parent):
+        self.frame_(parent)
+        self.label_("他の設定")
+        self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
+        values = list(range(1, 51))
+        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10)
+        self.clip_combo.set(self.clip_c)
+        
+        self.label_("クリップ数", layout_mode="place", x=50, y=100)
+        self.clip_combo.place(x=250, y=100)
+        self.clip_combo.bind("<<ComboboxSelected>>", self.on_clip_change_)
+        #temp作成
+        self.btn_(self.frame, "temp作成", command=self.Generate_temp_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=30, width=80, height=25)
+        self.auto_sync_()
+        return self.frame
+    
+    #機能
+    def on_clip_change_(self, event=None):
+        self.clip_c = int(self.clip_combo.get())
+        self.clip = deque(self.clip, maxlen=self.clip_c)
+        
+        config = self.load_config_()
+        config["clip_c"] = self.clip_c
+        self.save_config_(config)
     
     def help_log_(self, tab):
         self.add_log_("　　　　　　　　　　　　　　　　　　　　使い方", "#33FF00", tab=tab)
@@ -622,6 +652,7 @@ class function__:
             #config save用
             current["save_log"] = self.save_state.get()
             current["server"] = self.server is not None
+            current["clip_c"] = self.clip_c
             
             latest_config = self.load_config_()
             if "eula" in latest_config:
@@ -811,6 +842,9 @@ class function__:
             print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
             self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
             self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help")
+        elif "clip" in cmd:
+            print(self.clip)
+            self.add_log_(f"{self.clip}")
         # 入力欄クリア
         self.text_box.delete(0, tk.END)
     
@@ -831,6 +865,24 @@ class function__:
         self.text_box.insert(0, cmd)
         return "break"
     
+    def key_press_(self,event):
+        self.pressed.add(event.keysym)
+        if "F3" in self.pressed and event.keysym.lower() == "d":
+            self.clip.clear()
+            self.clip_index = 0
+            # main_frame の text_box をクリア
+            for box in self.log_boxes.values():
+                box.config(state="normal")
+                box.delete("1.0", tk.END)
+                box.config(state="disabled")
+            self.add_log_("削除されました", "red")
+            self.help_log_("help")
+            
+            return
+    
+    def key_release_(self, event):
+        self.pressed.discard(event.keysym)
+    
     def app_(self):
         print("再起動します。")
         exe = sys.executable
@@ -844,8 +896,47 @@ class function__:
         self.app_()
         return self.fix_, self.app_
     
+    def Generate_temp_(self,):
+        path = "Extensions/temp.py"
+        temp = """
+#temp Extensions
+# Extensions/temp.py
+import builtins
+from typing import TYPE_CHECKING
+
+
+from ServerManager1_4_2 import function__
+
+id = "temp"
+
+manager: "function__" = builtins.FUNC_INSTANCE
+
+
+def show_temp_frame():
+    # フレーム作成
+    manager.frame_(manager.win)
+    manager.label_("Temp Frame")
+    manager.log_box_()
+    manager.scrollbar_()
+    
+    # temp タブとして登録
+    manager.log_boxes["temp"] = manager.log_box
+    
+    # フレーム表示
+    manager.show_frame(manager.frame)
+    
+    # ログ出力
+    manager.add_log_("temp frame!", "blue", "temp")
+
+
+# ボタン追加（Main などに置く）
+manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color, fg=manager.fg,)
+"""
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(temp)
+    
     def none_(self):
-        pass
+        return None
 
 if __name__ == "__main__":
     win = tk.Tk()
