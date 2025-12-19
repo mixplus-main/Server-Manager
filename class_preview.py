@@ -1,4 +1,6 @@
-"""
+MAIN_VERSION = "1_5_2"
+
+f"""
 Hello! Thank you for reading this documentation.
 
 This file explains the basic rules and main APIs
@@ -146,11 +148,9 @@ Arguments:
 
 #temp Extensions
 # Extensions/temp.py
+import tkinter as tk
 import builtins
-from typing import TYPE_CHECKING
-
-
-from ServerManager1_4_0 import function__
+from ServerManager{MAIN_VERSION} import function__
 
 id = "temp"
 
@@ -187,43 +187,29 @@ import builtins
 import json
 import sys
 import os
-from tkinter import scrolledtext
-from tkinter import filedialog
-from tkinter import messagebox
+from tkinter import filedialog, messagebox, ttk
 from collections import deque
 from datetime import datetime
-from tkinter import ttk
 
 
 class function__:
     def __init__(self, win):
-        self.VERSION = "1_4_0"
+        self.bg = "black"; self.fg = "white"; self.btn_color = "#444444"
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.CONFIG_PATH = "config.json"
-        self.btn_color = "#444444"
+        self.log_boxes = {}; self.entries = {}
+        self.extensions_folder = "Extensions"
+        self.CONFIG_NAME = "config.json"
+        self.CONFIG_PATH, self.EXTENSIONS_PATH = self._resolve_paths_()
         self.layout_mode = "pack"
         self.username = "user"
-        self.clip_count = 10
-        self.log_boxes = {}
         self.server = None
-        self.bg = "black"
-        self.fg = "white"
-        self.entries = {}
         
+        self.clip_count = 10; self.clip_index = 0; self.pressed = set()
         
-        
-        
-        self.clip_index = 0
-        self.pressed = set()
-        
-        self.win = win
-        self.win.title("Server Manager Edit By MixPlus")
-        self.win.geometry("910x490")
-        self.win.minsize(910, 490)
-        self.win.configure(bg=f"{self.bg}")
-        self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
-        self.win.bind("<KeyPress>", self.key_press_)
-        self.win.bind("<KeyRelease>", self.key_release_)
+        self.win = win; self.win.title("Server Manager Edit By MixPlus")
+        self.win.geometry("910x490"); self.win.minsize(910, 490)
+        self.win.configure(bg=f"{self.bg}"); self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
+        self.win.bind("<KeyPress>", self.clear_box_); self.win.bind("<KeyRelease>", self.key_release_)
         
         self.CONFIG = {
                 "btn_color": "#444444",
@@ -245,11 +231,10 @@ class function__:
             with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
                 self.config = json.load(f)
         except Exception as e:
-            self.fix_()
-            self.config = self.CONFIG.copy()
+            self.fix_(); self.config = self.CONFIG.copy()
+        
         self.color_ch_()
-        self.clip_c = int(self.config.get("clip_c", 10))
-        self.clip = deque(maxlen=self.clip_c)
+        self.clip_c = int(self.config.get("clip_c", 10)); self.clip = deque(maxlen=self.clip_c)
     
     def fix_(self):
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -258,8 +243,7 @@ class function__:
         return
     
     def on_closing_(self):
-        self.stop_server_()
-        self.win.destroy()
+        self.stop_server_(); self.win.destroy()
         if self.server is not None:
             print("サーバーを停止しました。")
         else:
@@ -268,22 +252,19 @@ class function__:
     
     def start_server_(self):
         if self.server is not None:
-            print("[WARN] すでにサーバーが起動しています。")
-            self.add_log_("[WARN] すでにサーバーが起動しています。")
+            print("[WARN] すでにサーバーが起動しています。"); self.add_log_("[WARN] すでにサーバーが起動しています。")
             return
         # --- config.json を読み込む ---
-        config_path = os.path.join(os.path.dirname(__file__), "config.json")
+        config_path = self.CONFIG_PATH
         if not os.path.exists(config_path):
-            print("[ERROR] config.json が見つかりません。")
-            self.add_log_("[ERROR] config.json が見つかりません。")
+            print("[ERROR] config.json が見つかりません。"); self.add_log_("[ERROR] config.json が見つかりません。")
             return
         
         with open(config_path, "r", encoding="utf-8") as f:
             config = json.load(f)
         
         jar_path = config.get("server_jar", "")
-        min_ram = config.get("min_ram", "1G") or "1G"
-        max_ram = config.get("max_ram", "2G") or "2G"
+        min_ram = config.get("min_ram", "1G") or "1G"; max_ram = config.get("max_ram", "2G") or "2G"
         if not jar_path or not os.path.exists(jar_path):
             print("[ERROR] サーバーjarファイルが見つかりません。")
             self.add_log_("[ERROR] サーバーjarファイルが見つかりません。", "red")
@@ -318,11 +299,9 @@ class function__:
             return
         try:
             self.send_command_("/stop")
-            self.add_log_("[INFO] サーバーを停止中...", "red")
-            self.add_log_("[INFO] サーバーを停止中...", "red", "help")
+            self.add_log_("[INFO] サーバーを停止中...", "red"); self.add_log_("[INFO] サーバーを停止中...", "red", "help")
             self.win.after(10000, self.server.terminate)  # OK
-            self.add_log_("[INFO] サーバーを停止しました。", "yellow")
-            self.add_log_("[INFO] サーバーを停止しました。", "yellow", "help")
+            self.add_log_("[INFO] サーバーを停止しました。", "yellow"); self.add_log_("[INFO] サーバーを停止しました。", "yellow", "help")
         except Exception as e:
             self.add_log_(f"[ERROR] サーバー停止に失敗: {e}")
         finally:
@@ -331,9 +310,7 @@ class function__:
     def send_command_(self, cmd: str):
         if cmd.startswith("/"):
             if self.server and self.server.stdin:
-                self.server.stdin.write(cmd + "\n")
-                self.server.stdin.flush()
-                print(f"[cmd] {cmd}")
+                self.server.stdin.write(cmd + "\n"); self.server.stdin.flush(); print(f"[cmd] {cmd}")
             else:
                 print("[WARN] サーバーが起動していません。")
                 self.add_log_("[WARN] サーバーは起動していません。", "yellow", tab="help")
@@ -344,31 +321,24 @@ class function__:
         if not box:
             return
         
-        box.tag_config("error", foreground="red")
-        box.tag_config("info", foreground="cyan")
+        box.tag_config("error", foreground="red"); box.tag_config("info", foreground="cyan")
         
         for line in iter(self.server.stdout.readline, ''):
             line = line.strip()
             box.config(state="normal")
-            
             if "ERROR" in line or "Exception" in line:
-                self.add_log_(f"{line}\n", "red", "help")
-                box.insert("end", line + "\n", "error")
+                self.add_log_(f"{line}\n", "red", "help"); box.insert("end", line + "\n", "error")
             elif "INFO" in line or "[INFO]" in line:
-                self.add_log_(f"{line}\n", "white", "help")
-                box.insert("end", line + "\n", "info")
+                self.add_log_(f"{line}\n", "white", "help"); box.insert("end", line + "\n", "info")
             else:
-                self.add_log_(f"{line}\n", "blue", "help")
-                box.insert("end", line + "\n")
+                self.add_log_(f"{line}\n", "blue", "help"); box.insert("end", line + "\n")
             
             if self.save_state.get():
-                today = datetime.now().strftime("%Y-%m-%d")
-                path = f"Manager_log/{today}.txt"
+                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager_log/{today}.txt"
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, "a", encoding="utf-8") as f:
                     f.write(f"{line}\n")
-            box.see("end")
-            box.config(state="disabled")
+            print(line); box.see("end"); box.config(state="disabled")
     
     def color_ch_(self):
         if os.path.exists(self.CONFIG_PATH):
@@ -429,7 +399,8 @@ class function__:
         self.text_box = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
         self.text_box.place(y=440, x=0)
         self.text_box.bind("<Return>", self.on_enter)
-        self.text_box.bind("<Up>", self.clip_)
+        self.text_box.bind("<Up>", self.clip_up_); self.text_box.bind("<Down>", self.clip_down_)
+        
         self.log_boxes['main'] = self.log_box
         return self.frame, self.text_box, self.log_box
     
@@ -478,10 +449,10 @@ class function__:
         self.label_("Extensions List")
         self.scrollbar_()
         self.listbox_()
-        Extensions_path = os.path.join(self.current_dir, "Extensions")
-        if os.path.exists(Extensions_path):
-            if Extensions_path.endswith('.py') and Extensions_path != "__init__.py":
-                for item in os.listdir(Extensions_path):
+        #test Extensions_path = os.path.join(self.current_dir, "Extensions")
+        if os.path.exists(self.EXTENSIONS_PATH):
+            if self.EXTENSIONS_PATH.endswith('.py') and self.EXTENSIONS_PATH != "__init__.py":
+                for item in os.listdir(self.EXTENSIONS_PATH):
                     self.listbox.insert(tk.END, item)
         else:
             self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
@@ -513,8 +484,10 @@ class function__:
             self.config = {}
         if not self.config.get("eula", False):
             answer = messagebox.askyesno("Minecraft EULA", "Minecraft EULA (https://aka.ms/MinecraftEULA) に同意しますか？")
+            if not answer:
+                return
+            self.config["eula"] = True
         
-        self.config["eula"] = True
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
         
@@ -550,6 +523,10 @@ class function__:
             entry.place(x=250, y=y)
             self.entries[key] = entry
         self.auto_sync_()
+        
+        
+        if self.config.get("eula", False):
+            self.agree_()
         return self.frame
     
     def help_tab_(self, parent):
@@ -607,20 +584,19 @@ class function__:
     def load_Extensions(self, window):
         if self.config.get("server", False):
             self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
-        
-        extensions_folder = 'Extensions'  # 拡張機能が格納されているフォルダ
+            
         os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
         
-        if not os.path.exists(extensions_folder):
-            print(f"{extensions_folder} フォルダが存在しません")
+        if not os.path.exists(self.EXTENSIONS_PATH):
+            print(f"{self.EXTENSIONS_PATH} フォルダが存在しません")
             return
         
         loaded_extensions = set()  # 重複ロード防止
         
         # インスタンスを builtins にセット
         builtins.FUNC_INSTANCE = self
-
-        for filename in os.listdir(extensions_folder):
+        
+        for filename in os.listdir(self.EXTENSIONS_PATH):
             if filename.endswith('.py') and filename != "__init__.py":
                 extension_name = filename[:-3]
                 
@@ -712,15 +688,15 @@ class function__:
     def load_config_(self):
         if not os.path.exists(self.CONFIG_PATH):
             with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(self.DEFAULT, f, indent=4, ensure_ascii=False)
-            return self.DEFAULT
+                json.dump(self.CONFIG, f, indent=4, ensure_ascii=False)
+            return self.CONFIG
         try:
             with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
             self.add_log_(f"設定ファイル読み込みエラー:{e}")
             print("設定ファイル読み込みエラー:", e)
-            return self.DEFAULT
+            return self.CONFIG
     
     def save_config_(self, data):
         try:
@@ -731,8 +707,7 @@ class function__:
             self.add_log_(f"設定保存エラー:{e}")
     
     def frame_(self, parent):
-        self.frame = tk.Frame(parent, bg=self.bg)
-        self.frame.place(x=0, y=20, width=910, height=490)
+        self.frame = tk.Frame(parent, bg=self.bg); self.frame.place(x=0, y=20, width=910, height=490)
     
     def label_(self, text, bg=None, fg=None, layout_mode=None, x=None, y=None):
         lbl = tk.Label(self.frame, text=text, bg=bg, fg=fg, font=("arial", 12))
@@ -819,93 +794,109 @@ class function__:
         if not cmd:
             return
         
-        self.clip.append(cmd)
-        self.clip_index = 0
-        print(self.clip)
+        self.clip.append(cmd); self.clip_index = 0; print(self.clip)
         
         # log_boxにコマンドを色付きで表示
         self.add_log_(f"<{self.username}> {cmd}", "#00FF1f")
         #custom command
         self.send_command_(cmd)
         if "server" in cmd:
-            print(f"Server: {self.server}")
-            self.add_log_(f"Server: {self.server}", "#FF00C8")
+            print(f"Server: {self.server}"); self.add_log_(f"Server: {self.server}", "#FF00C8")
         elif "help" in cmd:
             self.help_log_("main")
         elif cmd.startswith("."):
-            tell_cmd = f"/say @a [Server] {cmd[1:]}"
+            tell_cmd = f"/say {cmd[1:]}"
             if self.server and self.server.stdin:
-                self.server.stdin.write(tell_cmd + "\n")
-                self.server.stdin.flush()
+                self.server.stdin.write(tell_cmd + "\n"); self.server.stdin.flush()
             self.add_log_(f"<{self.username}> {tell_cmd}", "#00FF1f")
-        elif "command" in cmd:
-            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help")
+        elif "command" in cmd or "cmd" in cmd:
+            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help\nclip: クリップを表示")
         elif "clip" in cmd:
-            print(self.clip)
-            self.add_log_(f"{self.clip}")
+            print(self.clip); self.add_log_(f"{self.clip}")
+        elif "clear" in cmd:
+            self.clear_all_()
         # 入力欄クリア
         self.text_box.delete(0, tk.END)
     
-    def clip_(self, event):
+    def clip_up_(self, event):
         if not self.clip:
             return "break"
-        
-        if self.clip_index < len(self.clip):
+        elif self.clip_index < len(self.clip):
             self.clip_index += 1
         index = self.clip_index - 1
         
         if index >= len(self.clip):
             index = len(self.clip) - 1
         
+        cmd = self.clip[index]; self.text_box.delete(0, tk.END); self.text_box.insert(0, cmd)
+        return "break"
+    
+    def clip_down_(self, event):
+        if not self.clip:
+            return "break"
+        
+        # 1つ戻す
+        if self.clip_index > 1:
+            self.clip_index -= 1
+        else:
+            # 0 or 1 なら入力欄クリア
+            self.clip_index = 0
+            self.text_box.delete(0, tk.END)
+            return "break"
+        
+        index = self.clip_index - 1
         cmd = self.clip[index]
         
         self.text_box.delete(0, tk.END)
         self.text_box.insert(0, cmd)
         return "break"
     
-    def key_press_(self,event):
+    def clear_all_(self):
+        # 履歴クリア
+        self.clip.clear()
+        self.clip_index = 0
+        
+        # 入力欄クリア
+        self.text_box.delete(0, tk.END)
+        
+        # log_boxes クリア
+        for box in self.log_boxes.values():
+            box.config(state="normal")
+            box.delete("1.0", tk.END)
+            box.config(state="disabled")
+            
+        self.add_log_("削除されました", "red")
+        self.help_log_("help")
+    
+    def clear_box_(self, event):
         self.pressed.add(event.keysym)
         if "F3" in self.pressed and event.keysym.lower() == "d":
-            self.clip.clear()
-            self.clip_index = 0
-            # main_frame の text_box をクリア
-            for box in self.log_boxes.values():
-                box.config(state="normal")
-                box.delete("1.0", tk.END)
-                box.config(state="disabled")
-            self.add_log_("削除されました", "red")
-            self.help_log_("help")
-            
+            self.clear_all_()
             return
     
     def key_release_(self, event):
         self.pressed.discard(event.keysym)
     
     def app_(self):
-        print("再起動します。")
-        exe = sys.executable
-        script = os.path.abspath(sys.argv[0])
-        subprocess.Popen([exe, script])  # 新しいプロセスを起動 停止
-        self.win.destroy()
+        print("再起動します。"); exe = sys.executable; script = os.path.abspath(sys.argv[0])
+        subprocess.Popen([exe, script]); self.win.destroy()  # 新しいプロセスを起動 停止
         return
     
     def config_reset_(self):
-        self.fix_()
-        self.app_()
-        return self.fix_, self.app_
+        self.fix_(); self.app_(); return self.fix_, self.app_
     
     def Generate_temp_(self,):
-        path = "Extensions/temp.py"
-        temp = """
+        print("テンプレートを作成しました")
+        function.add_log_("テンプレートを作成しました", "#002AFA"); path = os.path.join(self.EXTENSIONS_PATH, "temp.py")
+        temp = f"""
 #temp Extensions
 # Extensions/temp.py
 import builtins
-from typing import TYPE_CHECKING
 
 
-from ServerManager1_4_2 import function__
+from ServerManager{MAIN_VERSION} import function__
 
 id = "temp"
 
@@ -934,16 +925,31 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
 """
         with open(path, "w", encoding="utf-8") as f:
             f.write(temp)
+        
+    def _resolve_paths_(self):
+        if getattr(sys, "frozen", False):
+            base_dir = os.path.dirname(sys.executable)
+        else:
+            base_dir = os.path.dirname(__file__)
+            
+        config_path = os.path.join(base_dir, self.CONFIG_NAME)
+        extensions_path = os.path.join(base_dir, "Extensions")
+        
+        return config_path, extensions_path
     
     def none_(self):
-        return None
+        print("機能がありません"); return None
 
 if __name__ == "__main__":
-    win = tk.Tk()
-    function = function__(win) 
-    function.gui_()
+    win = tk.Tk(); function = function__(win)
     
-    
-    function.frame_main.lift()
-    function.load_Extensions(win)
-    function.win.mainloop()
+    #起動など
+    function.gui_(); function.frame_main.lift(); function.load_Extensions(win); function.win.mainloop()
+
+ServerManager = f'''
+pyinstaller --onefile ServerManager{MAIN_VERSION}.py
+
+pyinstaller --onefile --noconsole ServerManager{MAIN_VERSION}.py
+
+pyinstaller --onefile --icon=icon.ico ServerManager{MAIN_VERSION}.py
+'''; print(ServerManager)
