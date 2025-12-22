@@ -1027,3 +1027,4 @@ pyinstaller --onefile --noconsole ServerManager{MAIN_VERSION}.py
 
 pyinstaller --onefile --icon=icon.ico ServerManager{MAIN_VERSION}.py
 '''; print(ServerManager)
+
