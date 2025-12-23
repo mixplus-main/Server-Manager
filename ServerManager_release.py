@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_16"
+MAIN_VERSION = "1_5_17"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -429,8 +429,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
     def create_updater_(self):
         target_file = os.path.basename(sys.argv[0])
         update_code = f'''import os
-import time
-import urllib.request
+import os, sys, time, atexit, urllib.request
 
 URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
 
@@ -443,21 +442,10 @@ def main():
         print("アップデート完了")
     except Exception as e:
         print("ダウンロード失敗:", e)
-        
-    # スクリプトの自己削除
-    #os.remove(__file__) # update.pyを自己削除a
-    
 if __name__ == "__main__":
-    import os, sys, atexit
-    
     # atexitを使って、update.pyが終了する際に自分を削除する
-    def remove_update_script():
-        os.remove(sys.argv[0])
-    
-    atexit.register(remove_update_script)
-    
-    main()
-    sys.exit()
+    def remove_update_script(): os.remove(sys.argv[0])
+    atexit.register(remove_update_script); main(); sys.exit()
 '''
         # update.pyをファイルに書き込む
         with open("update.py", "w", encoding="utf-8") as f:
