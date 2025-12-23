@@ -1,4 +1,5 @@
-MAIN_VERSION = "1_5_23"
+MAIN_VERSION = "1_5_26"
+
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -196,9 +197,13 @@ from datetime import datetime
 from PIL import Image, ImageTk
 
 class Updater__:
-    def __init__(self, win, stop_server_func):
+    def __init__(self, win, stop_server_func,):
         self.win = win
         self.stop_server_ = stop_server_func
+        if getattr(sys, "frozen", False):
+            self.BASE_DIR = os.path.dirname(sys.executable)  # exeの場合
+        else:
+            self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # pyの場合
     
     def exe_or_python_(self):
         if getattr(sys, 'frozen', False):
@@ -209,7 +214,8 @@ class Updater__:
     def create_updater_(self):
         if getattr(sys, "frozen", False):
             return
-        target_file = os.path.basename(sys.argv[0])
+        file_name = os.path.basename(sys.argv[0])
+        target_file = os.path.join(self.BASE_DIR, file_name)
         update_code = f'''import os, sys, time, atexit, urllib.request
 
 URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
@@ -219,9 +225,9 @@ def main():
     
     # 最新コードをダウンロードして上書き
     try:
-        urllib.request.urlretrieve(URL, "{target_file}")
+        urllib.request.urlretrieve(URL, r"{target_file}")
         print("アップデート完了")
-    except Exceptionアップデート
+    except Exception as e:
         print("ダウンロード失敗:", e)
 if __name__ == "__main__":
     # atexitを使って、update.pyが終了する際に自分を削除する
@@ -304,28 +310,6 @@ class function__:
         self.color_ch_()
         self.clip_c = int(self.config.get("clip_c", 10)); self.clip = deque(maxlen=self.clip_c)
         
-        #__init__.py生成
-        BASE_LIMIT_DIR = os.path.dirname(os.path.abspath(__file__))
-        for current_dir, dirs, files in os.walk(BASE_LIMIT_DIR):
-            current_dir = os.path.abspath(current_dir)
-            if not current_dir.startswith(BASE_LIMIT_DIR):
-                continue
-            
-            if "__pycache__" in current_dir:
-                continue
-            if not any(f.endswith(".py") for f in files):
-                continue
-            stack = [current_dir]
-            while stack:
-                base = stack.pop()
-                init_path = os.path.join(base, "__init__.py")
-                if not os.path.exists(init_path):
-                    open(init_path, "w").close()
-                    
-                for name in os.listdir(base):
-                    path = os.path.join(base, name)
-                    if os.path.isdir(path):
-                        stack.append(path)
         self.updater = Updater__(self.win, self.stop_server_)
     
     def fix_(self):
@@ -695,7 +679,7 @@ class function__:
         if self.config.get("server", False):
             self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
             
-        os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
+        
         
         if not os.path.exists(self.EXTENSIONS_PATH):
             print(f"{self.EXTENSIONS_PATH} フォルダが存在しません")
@@ -1038,6 +1022,28 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
         print("Backup created:", self.backup_dir)
         self.add_log_(f"Backup created:{self.backup_dir}")
         messagebox.showinfo("情報", "バックアップが完了しました")
+        
+    def generate_init(self, base_dir):
+        base_dir = os.path.abspath(base_dir)
+        
+        for root, dirs, files in os.walk(base_dir):
+            # exeより深いフォルダだけ対象
+            if os.path.abspath(root) == base_dir:
+                continue
+            
+            # .py ファイルがなければスキップ
+            py_files = [f for f in files if f.endswith(".py")]
+            if not py_files:
+                continue
+            
+            # __pycache__ はスキップ
+            if "__pycache__" in root:
+                continue
+            
+            # __init__.py がなければ作成
+            init_path = os.path.join(root, "__init__.py")
+            if not os.path.exists(init_path):
+                open(init_path, "w", encoding="utf-8").close()
     
     def none_(self):
         print("機能がありません"); return None
@@ -1045,6 +1051,8 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
 if __name__ == "__main__":
     win = tk.Tk(); function = function__(win)
     function.add_log_(f"{MAIN_VERSION}")
+    function.generate_init(function.BASE_DIR)
+
     #起動など
     function.gui_(); function.frame_main.lift(); function.load_Extensions(win); function.win.mainloop()
 
