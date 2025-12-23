@@ -202,30 +202,13 @@ class Updater__:
     
     def exe_or_python_(self):
         if getattr(sys, 'frozen', False):
-            self.create_updater_exe_()
+            pass
         else:
             self.create_updater_()
     
-    def create_updater_exe_(self):
-        target_file = os.path.basename(sys.argv[0])
-        update_code = f"""import os, sys, time, atexit, urllib.request
-URL = "https://github.com/mixplus-main/Server-Manager/releases/latest/download/ServerManager.exe"
-def main():
-    time.sleep(3)
-    try:
-        urllib.request.urlretrieve(URL, "{target_file}"); print("アップデート完了")
-    except Exception as e:
-        print("ダウンロード失敗:", e)
-if __name__ == "__main__":
-    atexit.register(lambda: os.remove(sys.argv[0])); main(); sys.exit()
-"""
-        with open("update_exe.py", "w", encoding="utf-8") as f:
-            f.write(update_code)
-        subprocess.Popen([sys.executable, "update_exe.py"])
-        self.stop_server_()
-        self.win.destroy()
-    
     def create_updater_(self):
+        if getattr(sys, "frozen", False):
+            return
         target_file = os.path.basename(sys.argv[0])
         update_code = f'''import os, sys, time, atexit, urllib.request
 
@@ -681,7 +664,8 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         #backup
         self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
         #update
-        self.btn_(self.frame, "アップデート", command=self.updater.exe_or_python_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
+        if not getattr(sys, "frozen", False):
+            self.btn_(self.frame, "アップデート", command=self.updater.exe_or_python_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
         self.auto_sync_()
         return self.frame
     
