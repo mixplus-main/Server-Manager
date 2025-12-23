@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_15_beta"
+MAIN_VERSION = "1_5_13"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -428,7 +428,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.fg = self.config.get("fg", "white") or "white"
         self.btn_color = self.config.get("btn_color", "#444444") or "#444444"
     
-    def create_updater(win):
+    def create_updater_(self, win):
         target_file = os.path.basename(sys.argv[0])
         update_code = f'''import os
 import time
@@ -571,6 +571,7 @@ if __name__ == "__main__":
         else:
             self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
         self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
+        
         return self.frame
     
     def plugins_tab_(self, parent):
@@ -657,8 +658,7 @@ if __name__ == "__main__":
         self.label_("他の設定")
         self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
         values = list(range(1, 51))
-        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10)
-        self.clip_combo.set(self.clip_c)
+        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10); self.clip_combo.set(self.clip_c)
         
         self.label_("クリップ数", layout_mode="place", x=50, y=100)
         self.clip_combo.place(x=250, y=100)
@@ -667,7 +667,8 @@ if __name__ == "__main__":
         self.btn_(self.frame, "temp作成", command=self.Generate_temp_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=30, width=80, height=25)
         #backup
         self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
-        
+        #update
+        self.btn_(self.frame, "アップデート", command=lambda: self.create_updater_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
         self.auto_sync_()
         return self.frame
     
