@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_17"
+MAIN_VERSION = "1_5_20"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -195,6 +195,60 @@ from collections import deque
 from datetime import datetime
 from PIL import Image, ImageTk
 
+class Updater__:
+    def __init__(self, win, stop_server_func):
+        self.win = win
+        self.stop_server_ = stop_server_func
+    
+    def exe_or_python_(self):
+        if getattr(sys, 'frozen', False):
+            self.create_updater_exe_()
+        else:
+            self.create_updater_()
+    
+    def create_updater_exe_(self):
+        target_file = os.path.basename(sys.argv[0])
+        update_code = f"""import os, sys, time, atexit, urllib.request
+URL = "https://github.com/mixplus-main/Server-Manager/releases/latest/download/ServerManager.exe"
+def main():
+    time.sleep(3)
+    try:
+        urllib.request.urlretrieve(URL, "{target_file}"); print("アップデート完了")
+    except Exception as e:
+        print("ダウンロード失敗:", e)
+if __name__ == "__main__":
+    atexit.register(lambda: os.remove(sys.argv[0])); main(); sys.exit()
+"""
+        with open("update_exe.py", "w", encoding="utf-8") as f:
+            f.write(update_code)
+        subprocess.Popen([sys.executable, "update_exe.py"])
+        self.stop_server_()
+        self.win.destroy()
+    
+    def create_updater_(self):
+        target_file = os.path.basename(sys.argv[0])
+        update_code = f'''import os, sys, time, atexit, urllib.request
+
+URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
+
+def main():
+    time.sleep(3)
+    
+    # 最新コードをダウンロードして上書き
+    try:
+        urllib.request.urlretrieve(URL, "{target_file}")
+        print("アップデート完了")
+    except Exception as e:
+        print("ダウンロード失敗:", e)
+if __name__ == "__main__":
+    # atexitを使って、update.pyが終了する際に自分を削除する
+    def remove_update_script(): os.remove(sys.argv[0])
+    atexit.register(remove_update_script); main(); sys.exit()
+'''
+            # update.pyをファイルに書き込む
+        with open("update.py", "w", encoding="utf-8") as f:
+            f.write(update_code)
+        subprocess.Popen([sys.executable, "update.py"]); self.stop_server_(); self.win.destroy()
 
 class function__:
     def __init__(self, win):
@@ -274,6 +328,7 @@ class function__:
                     path = os.path.join(base, name)
                     if os.path.isdir(path):
                         stack.append(path)
+        self.updater = Updater__(self.win, self.stop_server_)
     
     def fix_(self):
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -425,34 +480,6 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.bg = self.config.get("bg", "black") or "black"
         self.fg = self.config.get("fg", "white") or "white"
         self.btn_color = self.config.get("btn_color", "#444444") or "#444444"
-    
-    def create_updater_(self):
-        target_file = os.path.basename(sys.argv[0])
-        update_code = f'''import os
-import os, sys, time, atexit, urllib.request
-
-URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
-
-def main():
-    time.sleep(3)
-    
-    # 最新コードをダウンロードして上書き
-    try:
-        urllib.request.urlretrieve(URL, "{target_file}")
-        print("アップデート完了")
-    except Exception as e:
-        print("ダウンロード失敗:", e)
-if __name__ == "__main__":
-    # atexitを使って、update.pyが終了する際に自分を削除する
-    def remove_update_script(): os.remove(sys.argv[0])
-    atexit.register(remove_update_script); main(); sys.exit()
-'''
-        # update.pyをファイルに書き込む
-        with open("update.py", "w", encoding="utf-8") as f:
-            f.write(update_code)
-        subprocess.Popen([sys.executable, "update.py"])
-        self.stop_server_()
-        win.destroy()
     
     def gui_(self):
         self.frame_main, self.box_main, self.log_box = self.main_tab_(win)
@@ -654,7 +681,7 @@ if __name__ == "__main__":
         #backup
         self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
         #update
-        self.btn_(self.frame, "アップデート", command=self.create_updater_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
+        self.btn_(self.frame, "アップデート", command=self.updater.exe_or_python_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
         self.auto_sync_()
         return self.frame
     
@@ -1041,7 +1068,7 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
 
 if __name__ == "__main__":
     win = tk.Tk(); function = function__(win)
-    
+    function.add_log_(f"{MAIN_VERSION}")
     #起動など
     function.gui_(); function.frame_main.lift(); function.load_Extensions(win); function.win.mainloop()
 
