@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_13"
+MAIN_VERSION = "1_5_16"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -287,15 +287,13 @@ class function__:
         rename_code = f'''import os, sys, time, atexit
 def self_del():
     old_path = r"{old_name}"; new_path = r"{new_name}"
-    if old_path == new_path:
-        pass
     for _ in range(5):
         try:
             if os.path.exists(old_path):
                 os.rename(old_path, new_path)
             break
         except PermissionError:
-            time.sleep(0.5)
+            time.sleep(0.01)
 atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.exit()
         '''
         if not getattr(sys, "frozen", False):
@@ -428,6 +426,46 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.fg = self.config.get("fg", "white") or "white"
         self.btn_color = self.config.get("btn_color", "#444444") or "#444444"
     
+    def create_updater_(self):
+        target_file = os.path.basename(sys.argv[0])
+        update_code = f'''import os
+import time
+import urllib.request
+
+URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
+
+def main():
+    time.sleep(3)
+    
+    # 最新コードをダウンロードして上書き
+    try:
+        urllib.request.urlretrieve(URL, "{target_file}")
+        print("アップデート完了")
+    except Exception as e:
+        print("ダウンロード失敗:", e)
+        
+    # スクリプトの自己削除
+    #os.remove(__file__) # update.pyを自己削除a
+    
+if __name__ == "__main__":
+    import os, sys, atexit
+    
+    # atexitを使って、update.pyが終了する際に自分を削除する
+    def remove_update_script():
+        os.remove(sys.argv[0])
+    
+    atexit.register(remove_update_script)
+    
+    main()
+    sys.exit()
+'''
+        # update.pyをファイルに書き込む
+        with open("update.py", "w", encoding="utf-8") as f:
+            f.write(update_code)
+        subprocess.Popen([sys.executable, "update.py"])
+        self.stop_server_()
+        win.destroy()
+    
     def gui_(self):
         self.frame_main, self.box_main, self.log_box = self.main_tab_(win)
         self.show_frame(self.frame_main)
@@ -524,7 +562,6 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.label_("Extensions List")
         self.scrollbar_()
         self.listbox_()
-        #test Extensions_path = os.path.join(self.current_dir, "Extensions")
         if os.path.exists(self.EXTENSIONS_PATH):
             if self.EXTENSIONS_PATH.endswith('.py') and self.EXTENSIONS_PATH != "__init__.py":
                 for item in os.listdir(self.EXTENSIONS_PATH):
@@ -532,6 +569,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         else:
             self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
         self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
+        
         return self.frame
     
     def plugins_tab_(self, parent):
@@ -618,8 +656,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.label_("他の設定")
         self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
         values = list(range(1, 51))
-        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10)
-        self.clip_combo.set(self.clip_c)
+        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10); self.clip_combo.set(self.clip_c)
         
         self.label_("クリップ数", layout_mode="place", x=50, y=100)
         self.clip_combo.place(x=250, y=100)
@@ -628,7 +665,8 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.btn_(self.frame, "temp作成", command=self.Generate_temp_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=30, width=80, height=25)
         #backup
         self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
-        
+        #update
+        self.btn_(self.frame, "アップデート", command=self.create_updater_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
         self.auto_sync_()
         return self.frame
     
@@ -785,7 +823,6 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
             self.add_log_(f"設定保存エラー:{e}")
     
     def frame_(self, parent):
-        #test
         self.frame = tk.Frame(parent, bg=self.bg); self.frame.place(x=0, y=20, width=910, height=490)
     
     def label_(self, text, bg=None, fg=None, layout_mode=None, x=None, y=None):
@@ -1027,4 +1064,3 @@ pyinstaller --onefile --noconsole ServerManager{MAIN_VERSION}.py
 
 pyinstaller --onefile --icon=icon.ico ServerManager{MAIN_VERSION}.py
 '''; print(ServerManager)
-
