@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_20"
+MAIN_VERSION = "1_5_23"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -221,7 +221,7 @@ def main():
     try:
         urllib.request.urlretrieve(URL, "{target_file}")
         print("アップデート完了")
-    except Exception as e:
+    except Exceptionアップデート
         print("ダウンロード失敗:", e)
 if __name__ == "__main__":
     # atexitを使って、update.pyが終了する際に自分を削除する
@@ -236,9 +236,24 @@ if __name__ == "__main__":
 class function__:
     def __init__(self, win):
         #file
+        if getattr(sys, "frozen", False):
+            self.BASE_DIR = os.path.dirname(sys.executable)  # exeの場合
+        else:
+            self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # pyの場合
         self.daytime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        os.makedirs("Manager_log", exist_ok=True); os.makedirs("server", exist_ok=True); os.makedirs("backup", exist_ok=True)
-        self.extensions_folder = "Extensions"; self.CONFIG_NAME = "config.json"; self._server_dir = "server"; self.backup = "server"; self.backup_dir = f"backup/server_{self.daytime}"
+        
+        #path
+        self.CONFIG_PATH = os.path.join(self.BASE_DIR, "config.json")
+        self.EXTENSIONS_PATH = os.path.join(self.BASE_DIR, "Extensions")
+        self.SERVER_DIR = os.path.join(self.BASE_DIR, "server")
+        self.BACKUP_DIR = os.path.join(self.BASE_DIR, "backup")
+        self.LOG_DIR = os.path.join(self.BASE_DIR, "Manager_log")
+        #フォルダー
+        os.makedirs(self.EXTENSIONS_PATH, exist_ok=True)
+        os.makedirs(self.SERVER_DIR, exist_ok=True)
+        os.makedirs(self.BACKUP_DIR, exist_ok=True)
+        os.makedirs(self.LOG_DIR, exist_ok=True)
+
         self.CONFIG_PATH, self.EXTENSIONS_PATH , self._server_dir, self.backup, self.backup_dir = self._resolve_paths_()
         
         
@@ -320,26 +335,6 @@ class function__:
         return
     
     def on_closing_(self):
-        f = os.path.basename(__file__); f = re.split(r"\d", f, 1)[0]
-        old_name = os.path.abspath(sys.argv[0]); new_name = os.path.abspath(f"{f}{MAIN_VERSION}.py")
-        rename_code = f'''import os, sys, time, atexit
-def self_del():
-    old_path = r"{old_name}"; new_path = r"{new_name}"
-    for _ in range(5):
-        try:
-            if os.path.exists(old_path):
-                os.rename(old_path, new_path)
-            break
-        except PermissionError:
-            time.sleep(0.01)
-atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.exit()
-        '''
-        if not getattr(sys, "frozen", False):
-            rename_path = os.path.join(os.path.dirname(sys.argv[0]), "rename.py")
-            with open(rename_path, "w", encoding="utf-8") as f:
-                f.write(textwrap.dedent(rename_code))
-                
-            subprocess.Popen([sys.executable, rename_path])
         self.stop_server_()
         self.win.destroy()
         
@@ -724,7 +719,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
                     self.add_log_(f"Loaded extension: {extension_name}", "green")
                     print(f"Loaded extension: {extension_name}")
                     #file
-                    extension_module = importlib.import_module(f"Manager.Extensions.{extension_name}")
+                    extension_module = importlib.import_module(f"Extensions.{extension_name}")
                     
                     # 拡張機能側に init_extension 関数があれば呼ぶ
                     if hasattr(extension_module, "init_extension"):
@@ -791,14 +786,11 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         self.save_config_(self.config)
     
     def agree_(self):
-        try:
-            with open("server/eula.txt", "w", encoding="utf-8") as file:
-                file.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\n")
-                file.write("eula=true\n")
-        
-        except Exception as e:
-            print("eula.txt 書き込みエラー:", e)
-            self.add_log_(f"eula.txt 書き込みエラー:{e}")
+        os.makedirs(self.SERVER_DIR, exist_ok=True)  # server フォルダがないとエラーになる
+        eula_path = os.path.join(self.SERVER_DIR, "eula.txt")
+        with open(eula_path, "w", encoding="utf-8") as f:
+            f.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA\n")
+            f.write("eula=true\n")
     
     def load_config_(self):
         if not os.path.exists(self.CONFIG_PATH):
@@ -1033,11 +1025,11 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
         else:
             base_dir = os.path.dirname(__file__)
             
-        config_path = os.path.join(base_dir, self.CONFIG_NAME)
-        extensions_path = os.path.join(base_dir, self.extensions_folder)
-        server_dir = os.path.join(base_dir, self._server_dir)
-        backup = os.path.join(base_dir, self.backup)
-        backup_dir = os.path.join(base_dir, self.backup_dir)
+        config_path = os.path.join(base_dir, "config.json")
+        extensions_path = os.path.join(base_dir, "Extensions")
+        server_dir = os.path.join(base_dir, "server")
+        backup = server_dir  # 元の self.backup 用
+        backup_dir = os.path.join(base_dir, "backup")
         
         return config_path, extensions_path, server_dir, backup, backup_dir
     
