@@ -254,8 +254,8 @@ class function__:
     def __init__(self, win):
         #file
         self.daytime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        os.makedirs("Manager", exist_ok=True); os.makedirs("Manager/Manager_log", exist_ok=True); os.makedirs("Manager/server", exist_ok=True); os.makedirs("Manager/backup", exist_ok=True)
-        self.extensions_folder = "Manager/Extensions"; self.CONFIG_NAME = "Manager/config.json"; self._server_dir = "Manager/server"; self.backup = "manager/server"; self.backup_dir = f"Manager/backup/server_{self.daytime}"
+        os.makedirs("Manager_log", exist_ok=True); os.makedirs("server", exist_ok=True); os.makedirs("backup", exist_ok=True)
+        self.extensions_folder = "Extensions"; self.CONFIG_NAME = "config.json"; self._server_dir = "server"; self.backup = "server"; self.backup_dir = f"backup/server_{self.daytime}"
         self.CONFIG_PATH, self.EXTENSIONS_PATH , self._server_dir, self.backup, self.backup_dir = self._resolve_paths_()
         
         
@@ -265,7 +265,7 @@ class function__:
         self.layout_mode = "pack"
         self.username = "user"
         self.server = None
-        self.background_path = "Manager/background.png"
+        self.background_path = "background.png"
         self.clip_count = 10; self.clip_index = 0; self.pressed = set()
         
         self.win = win; self.win.title("Server Manager Edit By MixPlus")
@@ -462,7 +462,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
                 self.add_log_(f"{line}\n", "blue", "help"); box.insert("end", line + "\n")
             
             if self.save_state.get():
-                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager/Manager_log/{today}.txt"
+                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager_log/{today}.txt"
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, "a", encoding="utf-8") as f:
                     f.write(f"{line}\n")
@@ -716,7 +716,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
         if self.config.get("server", False):
             self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
             
-        os.makedirs(os.path.dirname("Manager/Extensions/temp.py"), exist_ok=True)
+        os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
         
         if not os.path.exists(self.EXTENSIONS_PATH):
             print(f"{self.EXTENSIONS_PATH} フォルダが存在しません")
@@ -808,7 +808,7 @@ atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.
     
     def agree_(self):
         try:
-            with open("Manager/server/eula.txt", "w", encoding="utf-8") as file:
+            with open("server/eula.txt", "w", encoding="utf-8") as file:
                 file.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\n")
                 file.write("eula=true\n")
         
