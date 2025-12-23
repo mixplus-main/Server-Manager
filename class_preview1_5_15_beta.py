@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_2"
+MAIN_VERSION = "1_5_15_beta"
 
 f"""
 Hello! Thank you for reading this documentation.
@@ -183,32 +183,49 @@ import tkinter as tk
 import subprocess
 import threading
 import importlib
+import textwrap
 import builtins
+import shutil
 import json
 import sys
 import os
+import re
 from tkinter import filedialog, messagebox, ttk
 from collections import deque
 from datetime import datetime
+from PIL import Image, ImageTk
 
 
 class function__:
     def __init__(self, win):
+        #file
+        self.daytime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        os.makedirs("Manager", exist_ok=True); os.makedirs("Manager/Manager_log", exist_ok=True); os.makedirs("Manager/server", exist_ok=True); os.makedirs("Manager/backup", exist_ok=True)
+        self.extensions_folder = "Manager/Extensions"; self.CONFIG_NAME = "Manager/config.json"; self._server_dir = "Manager/server"; self.backup = "manager/server"; self.backup_dir = f"Manager/backup/server_{self.daytime}"
+        self.CONFIG_PATH, self.EXTENSIONS_PATH , self._server_dir, self.backup, self.backup_dir = self._resolve_paths_()
+        
+        
         self.bg = "black"; self.fg = "white"; self.btn_color = "#444444"
         self.current_dir = os.path.dirname(os.path.abspath(__file__))
         self.log_boxes = {}; self.entries = {}
-        self.extensions_folder = "Extensions"
-        self.CONFIG_NAME = "config.json"
-        self.CONFIG_PATH, self.EXTENSIONS_PATH = self._resolve_paths_()
         self.layout_mode = "pack"
         self.username = "user"
         self.server = None
-        
+        self.background_path = "Manager/background.png"
         self.clip_count = 10; self.clip_index = 0; self.pressed = set()
         
         self.win = win; self.win.title("Server Manager Edit By MixPlus")
         self.win.geometry("910x490"); self.win.minsize(910, 490)
-        self.win.configure(bg=f"{self.bg}"); self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
+        if os.path.exists(self.background_path):
+            background_image = Image.open(self.background_path)
+            background_image = background_image.resize(
+                (self.win.winfo_width(), self.win.winfo_height())
+            )
+            
+            self.background_imageTk = ImageTk.PhotoImage(background_image)
+        else:
+            self.win.configure(bg=self.bg)
+        self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
         self.win.bind("<KeyPress>", self.clear_box_); self.win.bind("<KeyRelease>", self.key_release_)
         
         self.CONFIG = {
@@ -232,9 +249,31 @@ class function__:
                 self.config = json.load(f)
         except Exception as e:
             self.fix_(); self.config = self.CONFIG.copy()
-        
         self.color_ch_()
         self.clip_c = int(self.config.get("clip_c", 10)); self.clip = deque(maxlen=self.clip_c)
+        
+        #__init__.py生成
+        BASE_LIMIT_DIR = os.path.dirname(os.path.abspath(__file__))
+        for current_dir, dirs, files in os.walk(BASE_LIMIT_DIR):
+            current_dir = os.path.abspath(current_dir)
+            if not current_dir.startswith(BASE_LIMIT_DIR):
+                continue
+            
+            if "__pycache__" in current_dir:
+                continue
+            if not any(f.endswith(".py") for f in files):
+                continue
+            stack = [current_dir]
+            while stack:
+                base = stack.pop()
+                init_path = os.path.join(base, "__init__.py")
+                if not os.path.exists(init_path):
+                    open(init_path, "w").close()
+                    
+                for name in os.listdir(base):
+                    path = os.path.join(base, name)
+                    if os.path.isdir(path):
+                        stack.append(path)
     
     def fix_(self):
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -243,7 +282,32 @@ class function__:
         return
     
     def on_closing_(self):
-        self.stop_server_(); self.win.destroy()
+        f = os.path.basename(__file__); f = re.split(r"\d", f, 1)[0]
+        old_name = os.path.abspath(sys.argv[0]); new_name = os.path.abspath(f"{f}{MAIN_VERSION}.py")
+        rename_code = f'''import os, sys, time, atexit
+def self_del():
+    old_path = r"{old_name}"; new_path = r"{new_name}"
+    if old_path == new_path:
+        pass
+    for _ in range(5):
+        try:
+            if os.path.exists(old_path):
+                os.rename(old_path, new_path)
+            break
+        except PermissionError:
+            time.sleep(0.5)
+atexit.register(lambda: os.remove(sys.argv[0])); time.sleep(1); self_del(); sys.exit()
+        '''
+        if not getattr(sys, "frozen", False):
+            rename_path = os.path.join(os.path.dirname(sys.argv[0]), "rename.py")
+            with open(rename_path, "w", encoding="utf-8") as f:
+                f.write(textwrap.dedent(rename_code))
+                
+            subprocess.Popen([sys.executable, rename_path])
+        self.stop_server_()
+        self.win.destroy()
+        
+        
         if self.server is not None:
             print("サーバーを停止しました。")
         else:
@@ -281,6 +345,7 @@ class function__:
         # --- サーバー起動 ---
         self.server = subprocess.Popen(
             ["java", f"-Xmx{max_ram}G", f"-Xms{min_ram}G", "-jar", jar_path, "nogui"],
+            cwd=self._server_dir,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -325,16 +390,26 @@ class function__:
         
         for line in iter(self.server.stdout.readline, ''):
             line = line.strip()
+            
+            if "Yggdrasil Key Fetcher/ERROR" in line:
+                self.add_log_(line, "red")
+                box.insert("end", line + "\n", "error")
+                continue
+            if line.startswith("at "):
+                continue
+            
             box.config(state="normal")
             if "ERROR" in line or "Exception" in line:
                 self.add_log_(f"{line}\n", "red", "help"); box.insert("end", line + "\n", "error")
             elif "INFO" in line or "[INFO]" in line:
                 self.add_log_(f"{line}\n", "white", "help"); box.insert("end", line + "\n", "info")
+            elif "WARN" in line or "[WARN]" in line:
+                self.add_log_(f"{line}\n", "#FCF803",); box.insert("end", line + "\n", "warn")
             else:
                 self.add_log_(f"{line}\n", "blue", "help"); box.insert("end", line + "\n")
             
             if self.save_state.get():
-                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager_log/{today}.txt"
+                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager/Manager_log/{today}.txt"
                 os.makedirs(os.path.dirname(path), exist_ok=True)
                 with open(path, "a", encoding="utf-8") as f:
                     f.write(f"{line}\n")
@@ -352,6 +427,45 @@ class function__:
         self.bg = self.config.get("bg", "black") or "black"
         self.fg = self.config.get("fg", "white") or "white"
         self.btn_color = self.config.get("btn_color", "#444444") or "#444444"
+    
+    def create_updater(win):
+        target_file = os.path.basename(sys.argv[0])
+        update_code = f'''import os
+import time
+import urllib.request
+
+URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
+
+def main():
+    time.sleep(2)
+    
+    # 最新コードをダウンロードして上書き
+    try:
+        urllib.request.urlretrieve(URL, "{target_file}")
+        print("アップデート完了")
+    except Exception as e:
+        print("ダウンロード失敗:", e)
+        
+    # スクリプトの自己削除
+    os.remove(__file__) # update.pyを自己削除a
+    
+if __name__ == "__main__":
+    import os, sys, atexit
+    
+    # atexitを使って、update.pyが終了する際に自分を削除する
+    def remove_update_script():
+        os.remove(sys.argv[0])
+    
+    atexit.register(remove_update_script)
+    
+    main()
+    sys.exit()
+'''
+        # update.pyをファイルに書き込む
+        with open("update.py", "w", encoding="utf-8") as f:
+            f.write(update_code)
+        subprocess.Popen([sys.executable, "update.py"])
+        win.destroy()
     
     def gui_(self):
         self.frame_main, self.box_main, self.log_box = self.main_tab_(win)
@@ -551,6 +665,9 @@ class function__:
         self.clip_combo.bind("<<ComboboxSelected>>", self.on_clip_change_)
         #temp作成
         self.btn_(self.frame, "temp作成", command=self.Generate_temp_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=30, width=80, height=25)
+        #backup
+        self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
+        
         self.auto_sync_()
         return self.frame
     
@@ -585,7 +702,7 @@ class function__:
         if self.config.get("server", False):
             self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
             
-        os.makedirs(os.path.dirname("Extensions/temp.py"), exist_ok=True)
+        os.makedirs(os.path.dirname("Manager/Extensions/temp.py"), exist_ok=True)
         
         if not os.path.exists(self.EXTENSIONS_PATH):
             print(f"{self.EXTENSIONS_PATH} フォルダが存在しません")
@@ -608,8 +725,8 @@ class function__:
                     self.add_log_(f"Loaded extension: {extension_name}", "green", "help")
                     self.add_log_(f"Loaded extension: {extension_name}", "green")
                     print(f"Loaded extension: {extension_name}")
-                    
-                    extension_module = importlib.import_module(f"Extensions.{extension_name}")
+                    #file
+                    extension_module = importlib.import_module(f"Manager.Extensions.{extension_name}")
                     
                     # 拡張機能側に init_extension 関数があれば呼ぶ
                     if hasattr(extension_module, "init_extension"):
@@ -677,7 +794,7 @@ class function__:
     
     def agree_(self):
         try:
-            with open("eula.txt", "w", encoding="utf-8") as file:
+            with open("Manager/server/eula.txt", "w", encoding="utf-8") as file:
                 file.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA (https://aka.ms/MinecraftEULA).\n")
                 file.write("eula=true\n")
         
@@ -707,6 +824,7 @@ class function__:
             self.add_log_(f"設定保存エラー:{e}")
     
     def frame_(self, parent):
+        #test
         self.frame = tk.Frame(parent, bg=self.bg); self.frame.place(x=0, y=20, width=910, height=490)
     
     def label_(self, text, bg=None, fg=None, layout_mode=None, x=None, y=None):
@@ -810,9 +928,9 @@ class function__:
                 self.server.stdin.write(tell_cmd + "\n"); self.server.stdin.flush()
             self.add_log_(f"<{self.username}> {tell_cmd}", "#00FF1f")
         elif "command" in cmd or "cmd" in cmd:
-            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help\nclip: クリップを表示")
+            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
+            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help\nclip: クリップを表示\nclear: ログとクリップを削除")
         elif "clip" in cmd:
             print(self.clip); self.add_log_(f"{self.clip}")
         elif "clear" in cmd:
@@ -823,34 +941,22 @@ class function__:
     def clip_up_(self, event):
         if not self.clip:
             return "break"
-        elif self.clip_index < len(self.clip):
+        if self.clip_index < len(self.clip):
             self.clip_index += 1
-        index = self.clip_index - 1
-        
-        if index >= len(self.clip):
-            index = len(self.clip) - 1
-        
-        cmd = self.clip[index]; self.text_box.delete(0, tk.END); self.text_box.insert(0, cmd)
+        self.text_box.delete(0, tk.END)
+        self.text_box.insert(0, self.clip[-self.clip_index])
         return "break"
     
     def clip_down_(self, event):
         if not self.clip:
             return "break"
-        
-        # 1つ戻す
         if self.clip_index > 1:
             self.clip_index -= 1
+            self.text_box.delete(0, tk.END)
+            self.text_box.insert(0, self.clip[-self.clip_index])
         else:
-            # 0 or 1 なら入力欄クリア
             self.clip_index = 0
             self.text_box.delete(0, tk.END)
-            return "break"
-        
-        index = self.clip_index - 1
-        cmd = self.clip[index]
-        
-        self.text_box.delete(0, tk.END)
-        self.text_box.insert(0, cmd)
         return "break"
     
     def clear_all_(self):
@@ -889,13 +995,11 @@ class function__:
     
     def Generate_temp_(self,):
         print("テンプレートを作成しました")
-        function.add_log_("テンプレートを作成しました", "#002AFA"); path = os.path.join(self.EXTENSIONS_PATH, "temp.py")
+        self.add_log_("テンプレートを作成しました", "#002AFA"); path = os.path.join(self.EXTENSIONS_PATH, "temp.py")
         temp = f"""
 #temp Extensions
 # Extensions/temp.py
 import builtins
-
-
 from ServerManager{MAIN_VERSION} import function__
 
 id = "temp"
@@ -925,7 +1029,7 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
 """
         with open(path, "w", encoding="utf-8") as f:
             f.write(temp)
-        
+    
     def _resolve_paths_(self):
         if getattr(sys, "frozen", False):
             base_dir = os.path.dirname(sys.executable)
@@ -933,9 +1037,18 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
             base_dir = os.path.dirname(__file__)
             
         config_path = os.path.join(base_dir, self.CONFIG_NAME)
-        extensions_path = os.path.join(base_dir, "Extensions")
+        extensions_path = os.path.join(base_dir, self.extensions_folder)
+        server_dir = os.path.join(base_dir, self._server_dir)
+        backup = os.path.join(base_dir, self.backup)
+        backup_dir = os.path.join(base_dir, self.backup_dir)
         
-        return config_path, extensions_path
+        return config_path, extensions_path, server_dir, backup, backup_dir
+    
+    def server_backup_(self):
+        shutil.copytree(self.backup, self.backup_dir, dirs_exist_ok=True)
+        print("Backup created:", self.backup_dir)
+        self.add_log_(f"Backup created:{self.backup_dir}")
+        messagebox.showinfo("情報", "バックアップが完了しました")
     
     def none_(self):
         print("機能がありません"); return None
