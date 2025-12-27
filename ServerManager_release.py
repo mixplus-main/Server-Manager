@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_26"
+MAIN_VERSION = "1_5_33"
 
 
 f"""
@@ -184,32 +184,25 @@ import tkinter as tk
 import subprocess
 import threading
 import importlib
-import textwrap
 import builtins
 import shutil
 import json
 import sys
 import os
-import re
 from tkinter import filedialog, messagebox, ttk
+from tkinter import colorchooser
+from PIL import Image, ImageTk
 from collections import deque
 from datetime import datetime
-from PIL import Image, ImageTk
 
 class Updater__:
-    def __init__(self, win, stop_server_func,):
+    def __init__(self, on_closing_):
         self.win = win
-        self.stop_server_ = stop_server_func
+        self.on_closing_ = on_closing_
         if getattr(sys, "frozen", False):
             self.BASE_DIR = os.path.dirname(sys.executable)  # exeの場合
         else:
             self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # pyの場合
-    
-    def exe_or_python_(self):
-        if getattr(sys, 'frozen', False):
-            pass
-        else:
-            self.create_updater_()
     
     def create_updater_(self):
         if getattr(sys, "frozen", False):
@@ -237,7 +230,7 @@ if __name__ == "__main__":
             # update.pyをファイルに書き込む
         with open("update.py", "w", encoding="utf-8") as f:
             f.write(update_code)
-        subprocess.Popen([sys.executable, "update.py"]); self.stop_server_(); self.win.destroy()
+        subprocess.Popen([sys.executable, "update.py"]); self.on_closing_()
 
 class function__:
     def __init__(self, win):
@@ -259,7 +252,7 @@ class function__:
         os.makedirs(self.SERVER_DIR, exist_ok=True)
         os.makedirs(self.BACKUP_DIR, exist_ok=True)
         os.makedirs(self.LOG_DIR, exist_ok=True)
-
+        
         self.CONFIG_PATH, self.EXTENSIONS_PATH , self._server_dir, self.backup, self.backup_dir = self._resolve_paths_()
         
         
@@ -310,7 +303,19 @@ class function__:
         self.color_ch_()
         self.clip_c = int(self.config.get("clip_c", 10)); self.clip = deque(maxlen=self.clip_c)
         
-        self.updater = Updater__(self.win, self.stop_server_)
+        # 設定保存用（key付き）
+        self.entries = {}
+        
+        # 見た目制御用（色変更）
+        self.entry_widgets = []
+        self.frames = []
+        self.labels = []
+        self.buttons = []
+        self.scrollbars = []
+        self.text_boxes = []
+        self.listboxes = []
+        
+        self.updater = Updater__(self.on_closing_)
     
     def fix_(self):
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
@@ -439,9 +444,9 @@ class function__:
         
         # グローバル変数に反映
         self.username = self.config.get("username", "Unknown")
-        self.bg = self.config.get("bg", "black") or "black"
-        self.fg = self.config.get("fg", "white") or "white"
-        self.btn_color = self.config.get("btn_color", "#444444") or "#444444"
+        self.bg = self.config.get("bg", "#000000")
+        self.fg = self.config.get("fg", "#ffffff")
+        self.btn_color = self.config.get("btn_color", "#444444")
     
     def gui_(self):
         self.frame_main, self.box_main, self.log_box = self.main_tab_(win)
@@ -474,16 +479,21 @@ class function__:
         
         #Extensions
         self.btn_(self.frame_setting, "拡張機能", command=lambda: self.show_frame(self.frame_Extensions), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=90, width=80, height=25)
+        
+        #その他の設定
+        self.btn_(self.frame_setting, "その他の設定", command=lambda: self.show_frame(self.frame_more_setting, ), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
         #button
         self.btn_(self.frame_setting, "GUI再起動", command=self.app_, bg=self.btn_color, fg="red", font=("arial", 10), layout_mode="place", x=758, y=410, width=150, height=25)
         self.btn_(self.frame_setting, "コンフィグリセット", command=self.config_reset_, bg=self.btn_color, fg="red", layout_mode="place", x=758, y=440, width=150, height=25)
         self.btn_(self.frame_main, "サーバー起動", command=self.start_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=0, y=2, width=100, height=20)
         self.btn_(self.frame_main, "サーバー停止", command=self.stop_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=101, y=2, width=100, height=20)
-        self.btn_(self.frame_setting, "その他の設定", command=lambda: self.show_frame(self.frame_more_setting, ), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
+        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("bg"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=260, width=60, height=20)
+        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("fg"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=300, width=60, height=20)
+        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("btn_color"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=340, width=60, height=20)
     #tab
     def main_tab_(self, parent):
         self.frame_(parent)
-        self.label_("Main")
+        self.label_("Main",)
         self.log_box_()
         self.scrollbar_()
         self.text_box = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
@@ -518,7 +528,7 @@ class function__:
         self.label_("MixPlus", fg="#00FF00", x=140, y=350)
         for i, line in enumerate(credit):
             
-            self.label_(line, bg=self.bg, fg=self.fg, layout_mode="place", x=30, y=30 + i * 25)
+            self.label_(line, layout_mode="place", x=30, y=30 + i * 25)
         return self.frame
     
     def mods_tab_(self, parent):
@@ -607,11 +617,13 @@ class function__:
         ]
         
         for text, key, y in settings:
-            tk.Label(self.frame, text=text, bg=self.bg, fg=self.fg, font=("arial", 12)).place(x=50, y=y)
+            self.label_(text, layout_mode="place", x=50, y=y)
             entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
             entry.insert(0, self.config.get(key, ""))
             entry.place(x=250, y=y)
             self.entries[key] = entry
+            
+            self.btn_(self.frame, "リセット", command=lambda k=key: self.reset_color_one_(k), bg=self.btn_color, fg=self.fg, layout_mode="place", x=620, y=y, width=70)
         self.auto_sync_()
         
         
@@ -644,11 +656,112 @@ class function__:
         self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
         #update
         if not getattr(sys, "frozen", False):
-            self.btn_(self.frame, "アップデート", command=self.updater.exe_or_python_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
+            self.btn_(self.frame, "アップデート", command=self.updater.create_updater_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
         self.auto_sync_()
         return self.frame
     
     #機能
+    def apply_colors(self):
+        # ===== Frame =====
+        for f in getattr(self, "frames", []):
+            try:
+                f.configure(bg=self.bg)
+            except tk.TclError:
+                pass
+            
+        # ===== Label =====
+        for l in getattr(self, "labels", []):
+            try:
+                l.configure(bg=self.bg, fg=self.fg)
+            except tk.TclError:
+                pass
+            
+        # ===== Entry =====
+        for e in getattr(self, "entry_widgets", []):
+            try:
+                e.configure(
+                    bg=self.btn_color,
+                    fg=self.fg,
+                    insertbackground=self.fg,
+                    selectbackground=self.bg,
+                    selectforeground=self.fg
+                )
+            except tk.TclError:
+                pass
+            
+        # ===== Button =====
+        for b in getattr(self, "buttons", []):
+            try:
+                b.configure(
+                    bg=self.btn_color,
+                    fg=self.fg,
+                    activebackground=self.bg,
+                    activeforeground=self.fg,
+                    highlightbackground=self.bg
+                )
+            except tk.TclError:
+                pass
+            
+        # ===== Scrollbar =====
+        for s in getattr(self, "scrollbars", []):
+            try:
+                s.configure(
+                    bg=self.btn_color,
+                    troughcolor=self.bg,
+                    activebackground=self.fg,
+                    highlightbackground=self.bg
+                )
+            except tk.TclError:
+                pass
+            
+        # ===== Text (log_box_) =====
+        for t in getattr(self, "text_boxes", []):
+            try:
+                t.configure(
+                    bg=self.bg,
+                    fg=self.fg,
+                    insertbackground=self.fg,
+                    selectbackground=self.btn_color,
+                    selectforeground=self.fg
+                )
+            except tk.TclError:
+                pass
+            
+        # ===== Listbox (list_box_) =====
+        for lb in getattr(self, "listboxes", []):
+            try:
+                lb.configure(
+                    bg=self.bg,
+                    fg=self.fg,
+                    selectbackground=self.btn_color,
+                    selectforeground=self.fg,
+                    highlightbackground=self.bg
+                )
+            except tk.TclError:
+                pass
+    
+    def reset_color_one_(self, key):
+        default = self.CONFIG.get(key)
+        if default is None:
+            return
+        
+        entry = self.entries.get(key)
+        if entry:
+            entry.delete(0, tk.END)
+            entry.insert(0, default)
+    
+    def pick_color_(self, key):
+        color = colorchooser.askcolor(title=f"{key} の色選択")
+        if not color[1]:
+            return
+        
+        entry = self.entries.get(key)
+        if entry:
+            entry.delete(0, tk.END)
+            entry.insert(0, color[1])
+        setattr(self, key, color[1])
+        self.apply_colors()
+    
     def on_clip_change_(self, event=None):
         self.clip_c = int(self.clip_combo.get())
         self.clip = deque(self.clip, maxlen=self.clip_c)
@@ -797,12 +910,17 @@ class function__:
             print("設定保存エラー:", e)
             self.add_log_(f"設定保存エラー:{e}")
     
-    def frame_(self, parent):
+    def frame_(self, parent, bg=None, fg=None):
+        if not bg: bg = self.bg
+        if not fg: fg = self.fg
         self.frame = tk.Frame(parent, bg=self.bg); self.frame.place(x=0, y=20, width=910, height=490)
+        self.frames.append(self.frame)
     
     def label_(self, text, bg=None, fg=None, layout_mode=None, x=None, y=None):
+        if not bg: bg = self.bg
+        if not fg: fg = self.fg
         lbl = tk.Label(self.frame, text=text, bg=bg, fg=fg, font=("arial", 12))
-        
+        self.labels.append(lbl)
         # place
         if layout_mode == "place":
             lbl.place(x=x if x is not None else 0, y=y if y is not None else 0)
@@ -823,24 +941,32 @@ class function__:
         # Scrollbar作成
         self.scrollbar_widget = tk.Scrollbar(self.frame, command=self.log_box.yview)
         self.scrollbar_widget.place(x=890, y=30, height=400)
-        
+        self.scrollbars.append(self.scrollbar_widget)
         # log_box に scrollbar を紐付け
         self.log_box.configure(yscrollcommand=self.scrollbar_widget.set)
     
-    def log_box_(self, x=0, y=30, width=900, height=400):
+    def log_box_(self, bg=None, fg=None, x=0, y=30, width=900, height=400):
+        if not bg: bg = self.bg
+        if not fg: fg = self.fg
         self.log_box = tk.Text(self.frame, bg=self.bg, fg=self.fg, font=("arial", 12), state="disabled")
         self.log_box.place(x=x, y=y, width=width, height=height)
         if hasattr(self, "scrollbar_widget"):
             self.log_box.configure(yscrollcommand=self.scrollbar_widget.set)
+        self.text_boxes.append(self.log_box)
     
     def listbox_(self, bg=None, fg=None, relief=None):
+        if not bg: bg = self.bg
+        if not fg: fg = self.fg
         self.listbox = tk.Listbox(self.frame, font=("arial", 12), bg=bg, fg=fg)
         self.listbox.config(yscrollcommand=self.scrollbar_widget.set)
         self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.listboxes.append(self.listbox)
     
     def btn_(self, iframe, text, command=None, bg=None, fg=None, layout_mode=None, x=None, y=None, width=100, height=20, font=("arial", 12), relief=None ):
+        if not bg: bg = self.bg
+        if not fg: fg = self.fg
         butt = tk.Button(iframe, text=text, command=command, bg=bg, fg=fg, font=font, relief=relief)
-        
+        self.buttons.append(butt)
         
         # place
         if layout_mode == "place":
@@ -874,46 +1000,52 @@ class function__:
         else:
             box.insert("end", text + "\n")
             
-        box.see("end")
-        box.config(state="disabled")
+        box.see("end"); box.config(state="disabled")
     
     def show_frame(self, frame):
         frame.tkraise()
     
     def on_enter(self, event=None):
         cmd = self.text_box.get().strip()
-        if not cmd:
-            return
+        if not cmd: return
         
-        self.clip.append(cmd); self.clip_index = 0; print(self.clip)
+        self.clip.append(cmd); self.clip_index = 0
         
-        # log_boxにコマンドを色付きで表示
-        self.add_log_(f"<{self.username}> {cmd}", "#00FF1f")
+        self.add_log_(f"<{self.username}> {cmd}", "#00FF1f"); self.send_command_(cmd)
+        
         #custom command
-        self.send_command_(cmd)
         if "server" in cmd:
             print(f"Server: {self.server}"); self.add_log_(f"Server: {self.server}", "#FF00C8")
+        
         elif "help" in cmd:
             self.help_log_("main")
+        
         elif cmd.startswith("."):
             tell_cmd = f"/say {cmd[1:]}"
             if self.server and self.server.stdin:
                 self.server.stdin.write(tell_cmd + "\n"); self.server.stdin.flush()
             self.add_log_(f"<{self.username}> {tell_cmd}", "#00FF1f")
+        
         elif "command" in cmd or "cmd" in cmd:
             print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
             self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
             self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help\nclip: クリップを表示\nclear: ログとクリップを削除")
+        
         elif "clip" in cmd:
-            print(self.clip); self.add_log_(f"{self.clip}")
+            print(", ".join(self.clip)); self.add_log_(", ".join(self.clip))
+        
         elif "clear" in cmd:
             self.clear_all_()
+        
+        elif "ver" in cmd or "version" in cmd:
+            print(rf"ServerManager:{MAIN_VERSION}")
+            self.add_log_(rf"ServerManager:{MAIN_VERSION}", "#0044FF")
+        
         # 入力欄クリア
         self.text_box.delete(0, tk.END)
     
     def clip_up_(self, event):
-        if not self.clip:
-            return "break"
+        if not self.clip: return "break"
         if self.clip_index < len(self.clip):
             self.clip_index += 1
         self.text_box.delete(0, tk.END)
@@ -1022,7 +1154,7 @@ manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color,
         print("Backup created:", self.backup_dir)
         self.add_log_(f"Backup created:{self.backup_dir}")
         messagebox.showinfo("情報", "バックアップが完了しました")
-        
+    
     def generate_init(self, base_dir):
         base_dir = os.path.abspath(base_dir)
         
@@ -1052,7 +1184,6 @@ if __name__ == "__main__":
     win = tk.Tk(); function = function__(win)
     function.add_log_(f"{MAIN_VERSION}")
     function.generate_init(function.BASE_DIR)
-
     #起動など
     function.gui_(); function.frame_main.lift(); function.load_Extensions(win); function.win.mainloop()
 
