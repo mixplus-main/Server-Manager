@@ -1,990 +1,260 @@
-MAIN_VERSION = "1_5_33"
-
-
-f"""
-Hello! Thank you for reading this documentation.
-
-This file explains the basic rules and main APIs
-used in ServerManager extensions.
-
-====================
-Basic Naming Rules
-====================
-
-- Functions end with an underscore (_)
-  Example: btn_, add_log_
-
-- Classes end with double underscores (__)
-  Example: function__
-
-Important Rules for Extensions
-------------------------------
-
-- Do NOT create a new Tk() window
-- Do NOT call mainloop()
-- Always use the existing manager instance:
-    builtins.FUNC_INSTANCE
-
-
-====================
-Main Functions
-====================
-
-add_log_
---------
-Displays a message in the log box.
-
-Usage:
-    add_log_("message", "color", "tab_name")
-
-Arguments:
-- message (str): Text to display
-- color (str): Text color (e.g. "blue", "white")
-- tab_name (str): Log tab name (e.g. "main", "help")
-
-
-frame_
-------
-Creates a frame.
-
-Usage:
-    frame_(parent)
-
-Arguments:
-- parent: Parent widget (usually another frame or window)
-
-Note:
-- Usually used internally. No need to modify.
-
-
-label_
--------
-Creates a label.
-
-Usage:
-    label_(
-        location,
-        "text",
-        bg="background color",
-        fg="font color",
-        font="font",
-        layout_mode="layout mode",
-        x=x,
-        y=y
-    )
-
-Arguments:
-- location: Parent frame
-- text (str): Label text
-- bg (str): Background color
-- fg (str): Font color
-- font: Font setting
-- layout_mode (str): "pack", "place", or "grid"
-
-
-log_box_
---------
-Creates a log box.
-
-Usage:
-    log_box_()
-    log_boxes["tab_name"] = log_box
-
-Important:
-- You must register the log box using:
-      log_boxes["tab_name"] = log_box
-- Otherwise, messages cannot be sent to that tab.
-
-
-scrollbar_
------------
-Creates a scrollbar.
-
-Usage:
-    scrollbar_()
-
-
-listbox_
----------
-Creates a listbox.
-
-Usage:
-    listbox_(
-        bg="background color",
-        fg="font color",
-        relief=None
-    )
-
-
-btn_
-----
-Creates a button.
-
-Usage:
-    btn_(
-        parent,
-        "text",
-        command=function_to_execute,
-        bg="background color",
-        fg="font color",
-        layout_mode=None,
-        x=x,
-        y=y,
-        row=row,
-        col=col
-    )
-
-Arguments:
-- parent: Parent frame
-- text (str): Button text
-- command: Function to execute when clicked
-- bg (str): Background color
-- fg (str): Font color
-- layout_mode (str):
-    - None or "pack" : pack()
-    - "place"        : uses x, y
-    - "grid"         : uses row, col
-
-
-
-#temp Extensions
-# Extensions/temp.py
-import tkinter as tk
-import builtins
-from ServerManager{MAIN_VERSION} import function__
-
-id = "temp"
-
-manager: "function__" = builtins.FUNC_INSTANCE
-
-
-def show_temp_frame():
-    # フレーム作成
-    manager.frame_(manager.win)
-    manager.label_("Temp Frame")
-    manager.log_box_()
-    manager.scrollbar_()
-    
-    # temp タブとして登録
-    manager.log_boxes["temp"] = manager.log_box
-    
-    # フレーム表示
-    manager.show_frame(manager.frame)
-    
-    # ログ出力
-    manager.add_log_("temp frame!", "blue", "temp")
-
-
-# ボタン追加（Main などに置く）
-manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color, fg=manager.fg,)
-
-"""
-
+MAIN_VERSION = "1_5_100"
+import importlib.util
 import tkinter as tk
 import subprocess
+import webbrowser
+import traceback
 import threading
-import importlib
-import builtins
+import winsound
 import shutil
 import json
 import sys
 import os
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox
+from typing import Protocol
 from tkinter import colorchooser
-from PIL import Image, ImageTk
 from collections import deque
 from datetime import datetime
 
-class Updater__:
-    def __init__(self, on_closing_):
-        self.win = win
-        self.on_closing_ = on_closing_
-        if getattr(sys, "frozen", False):
-            self.BASE_DIR = os.path.dirname(sys.executable)  # exeの場合
-        else:
-            self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # pyの場合
-    
-    def create_updater_(self):
-        if getattr(sys, "frozen", False):
-            return
-        file_name = os.path.basename(sys.argv[0])
-        target_file = os.path.join(self.BASE_DIR, file_name)
-        update_code = f'''import os, sys, time, atexit, urllib.request
+def beep():
+    if sys.platform.startswith("win"):
+        winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)  # Windows標準警告音
+    else:
+        print("\a", end="", flush=True)  # Linux/macOS ターミナルベル
 
-URL = "https://raw.githubusercontent.com/mixplus-main/Server-Manager/main/ServerManager_release.py"
-
-def main():
-    time.sleep(3)
+class Config:
+    DEFAULT_CONFIG = {
+    "server_jar": "",
+    "btn_color": "#444444",
+    "username": "user",
+    "bg": "black",
+    "fg": "white",
+    "history_size": 10,
+    "min_ram": "10",
+    "max_ram": "10",
+    "slots": "20",
+    "server": False,
+    "eula": False,
+    "debug": False,
+    "reset": False
+    }
     
-    # 最新コードをダウンロードして上書き
-    try:
-        urllib.request.urlretrieve(URL, r"{target_file}")
-        print("アップデート完了")
-    except Exception as e:
-        print("ダウンロード失敗:", e)
-if __name__ == "__main__":
-    # atexitを使って、update.pyが終了する際に自分を削除する
-    def remove_update_script(): os.remove(sys.argv[0])
-    atexit.register(remove_update_script); main(); sys.exit()
-'''
-            # update.pyをファイルに書き込む
-        with open("update.py", "w", encoding="utf-8") as f:
-            f.write(update_code)
-        subprocess.Popen([sys.executable, "update.py"]); self.on_closing_()
-
-class function__:
-    def __init__(self, win):
-        #file
-        if getattr(sys, "frozen", False):
-            self.BASE_DIR = os.path.dirname(sys.executable)  # exeの場合
-        else:
-            self.BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # pyの場合
-        self.daytime = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    def __init__(self):
+        log = tk.Tk()
+        log.withdraw()
         
-        #path
-        self.CONFIG_PATH = os.path.join(self.BASE_DIR, "config.json")
-        self.EXTENSIONS_PATH = os.path.join(self.BASE_DIR, "Extensions")
-        self.SERVER_DIR = os.path.join(self.BASE_DIR, "server")
-        self.BACKUP_DIR = os.path.join(self.BASE_DIR, "backup")
-        self.LOG_DIR = os.path.join(self.BASE_DIR, "Manager_log")
-        #フォルダー
-        os.makedirs(self.EXTENSIONS_PATH, exist_ok=True)
-        os.makedirs(self.SERVER_DIR, exist_ok=True)
-        os.makedirs(self.BACKUP_DIR, exist_ok=True)
-        os.makedirs(self.LOG_DIR, exist_ok=True)
-        
-        self.CONFIG_PATH, self.EXTENSIONS_PATH , self._server_dir, self.backup, self.backup_dir = self._resolve_paths_()
-        
-        
-        self.bg = "black"; self.fg = "white"; self.btn_color = "#444444"
-        self.current_dir = os.path.dirname(os.path.abspath(__file__))
-        self.log_boxes = {}; self.entries = {}
-        self.layout_mode = "pack"
-        self.username = "user"
-        self.server = None
-        self.background_path = "background.png"
-        self.clip_count = 10; self.clip_index = 0; self.pressed = set()
-        
-        self.win = win; self.win.title("Server Manager Edit By MixPlus")
-        self.win.geometry("910x490"); self.win.minsize(910, 490)
-        if os.path.exists(self.background_path):
-            background_image = Image.open(self.background_path)
-            background_image = background_image.resize(
-                (self.win.winfo_width(), self.win.winfo_height())
-            )
-            
-            self.background_imageTk = ImageTk.PhotoImage(background_image)
-        else:
-            self.win.configure(bg=self.bg)
-        self.win.protocol("WM_DELETE_WINDOW", self.on_closing_)
-        self.win.bind("<KeyPress>", self.clear_box_); self.win.bind("<KeyRelease>", self.key_release_)
-        
-        self.CONFIG = {
-                "btn_color": "#444444",
-                "username": "user",
-                "server_jar": "",
-                "min_ram": "10",
-                "max_ram": "10",
-                "slots": "20",
-                "bg": "black",
-                "fg": "white",
-                "eula": False,
-                "save_log": False,
-                "server": None,
-                "clip_count": 10,
-            }
-        
-        print("ファイル生成json保存やファイルの読み込み実行を理解できていません。\nこれがすべて実装されるとサーバー用のjarファイルeulaの同意\nJDKが必須です! JDK機能を搭載するかもしれませんが\njavaサーバーのみです。 jarファイルを選択してください。\nポート開放やipなどのサポートはありません。\nEdit By MixPlus")
-        try:
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                self.config = json.load(f)
-        except Exception as e:
-            self.fix_(); self.config = self.CONFIG.copy()
-        self.color_ch_()
-        self.clip_c = int(self.config.get("clip_c", 10)); self.clip = deque(maxlen=self.clip_c)
-        
-        # 設定保存用（key付き）
-        self.entries = {}
-        
-        # 見た目制御用（色変更）
-        self.entry_widgets = []
-        self.frames = []
-        self.labels = []
-        self.buttons = []
-        self.scrollbars = []
-        self.text_boxes = []
-        self.listboxes = []
-        
-        self.updater = Updater__(self.on_closing_)
-    
-    def fix_(self):
-        with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.CONFIG, f, indent=4, ensure_ascii=False)
-            return
-        return
-    
-    def on_closing_(self):
-        self.stop_server_()
-        self.win.destroy()
-        
-        
-        if self.server is not None:
-            print("サーバーを停止しました。")
-        else:
-            print("GUIを終了しました。")
-        return
-    
-    def start_server_(self):
-        if self.server is not None:
-            print("[WARN] すでにサーバーが起動しています。"); self.add_log_("[WARN] すでにサーバーが起動しています。")
-            return
-        # --- config.json を読み込む ---
-        config_path = self.CONFIG_PATH
-        if not os.path.exists(config_path):
-            print("[ERROR] config.json が見つかりません。"); self.add_log_("[ERROR] config.json が見つかりません。")
-            return
-        
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        
-        jar_path = config.get("server_jar", "")
-        min_ram = config.get("min_ram", "1G") or "1G"; max_ram = config.get("max_ram", "2G") or "2G"
-        if not jar_path or not os.path.exists(jar_path):
-            print("[ERROR] サーバーjarファイルが見つかりません。")
-            self.add_log_("[ERROR] サーバーjarファイルが見つかりません。", "red")
-            self.add_log_("[ERROR] サーバーjarファイルが見つかりません。", "red", "help")
-            return
-        
-        print(f"[INFO] サーバーを起動します: {jar_path}")
-        print(f"[INFO] RAM設定: min={min_ram}, max={max_ram}")
-        self.add_log_(f"[INFO] サーバーを起動します: {jar_path}", "blue")
-        self.add_log_(f"[INFO] サーバーを起動します: {jar_path}", "blue", "help")
-        self.add_log_(f"[INFO] RAM設定: min={min_ram}, max={max_ram}", "blue")
-        self.add_log_(f"[INFO] RAM設定: min={min_ram}, max={max_ram}", "blue", "help")
-        
-        # --- サーバー起動 ---
-        self.server = subprocess.Popen(
-            ["java", f"-Xmx{max_ram}G", f"-Xms{min_ram}G", "-jar", jar_path, "nogui"],
-            cwd=self._server_dir,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            bufsize=1
+        self.BASE_DIR = (
+            os.path.dirname(sys.executable)
+            if getattr(sys, "frozen", False)
+            else os.path.dirname(os.path.abspath(__file__))
         )
         
-        threading.Thread(target=self.read_output_, daemon=True).start()
+        self.CONFIG_PATH = os.path.join(self.BASE_DIR, "config.json")
+        self.EULA_PATH = os.path.join(self.BASE_DIR, "server", "eula.txt")
+        
+        self.MAX_FILE_SIZE = 300 #KB
+        self.MAX_FILE_SIZE *= 1024
+        
+        
+        self.load()
+        
+        if self.reset:
+            self._reset_config()
+            self.load()
     
-    def stop_server_(self):
-        if self.server is None:
-            self.add_log_("[WARN] サーバーは起動していません。", "yellow")
-            self.add_log_("[WARN] サーバーは起動していません。", "yellow", tab="help")
-            return
-        try:
-            self.send_command_("/stop")
-            self.add_log_("[INFO] サーバーを停止中...", "red"); self.add_log_("[INFO] サーバーを停止中...", "red", "help")
-            self.win.after(10000, self.server.terminate)  # OK
-            self.add_log_("[INFO] サーバーを停止しました。", "yellow"); self.add_log_("[INFO] サーバーを停止しました。", "yellow", "help")
-        except Exception as e:
-            self.add_log_(f"[ERROR] サーバー停止に失敗: {e}")
-        finally:
-            self.server = None
-    
-    def send_command_(self, cmd: str):
-        if cmd.startswith("/"):
-            if self.server and self.server.stdin:
-                self.server.stdin.write(cmd + "\n"); self.server.stdin.flush(); print(f"[cmd] {cmd}")
+    def load(self):
+        if os.path.exists(self.CONFIG_PATH) and os.path.getsize(self.CONFIG_PATH) > self.MAX_FILE_SIZE:
+            beep()
+            reset = messagebox.askyesno("警告", f"config.jsonのファイルサイズが{self.MAX_FILE_SIZE // 1024}KBを超えたためリセットされます")
+            print("ファイルサイズが大きすぎたためコンフィグがリセットされました")
+            if reset:
+                self._reset_config()
             else:
-                print("[WARN] サーバーが起動していません。")
-                self.add_log_("[WARN] サーバーは起動していません。", "yellow", tab="help")
-                self.add_log_("[WARN] サーバーは起動していません。", "yellow", tab="main")
-    
-    def read_output_(self):
-        box = self.log_boxes.get("main")  # mainタブのログボックスを使う
-        if not box:
-            return
+                beep()
+                false = messagebox.askyesno("警告", "本当によろしいですか?")
+                if false:
+                    sys.exit()
+                else:
+                    self._reset_config()
         
-        box.tag_config("error", foreground="red"); box.tag_config("info", foreground="cyan")
-        
-        for line in iter(self.server.stdout.readline, ''):
-            line = line.strip()
-            
-            if "Yggdrasil Key Fetcher/ERROR" in line:
-                self.add_log_(line, "red")
-                box.insert("end", line + "\n", "error")
-                continue
-            if line.startswith("at "):
-                continue
-            
-            box.config(state="normal")
-            if "ERROR" in line or "Exception" in line:
-                self.add_log_(f"{line}\n", "red", "help"); box.insert("end", line + "\n", "error")
-            elif "INFO" in line or "[INFO]" in line:
-                self.add_log_(f"{line}\n", "white", "help"); box.insert("end", line + "\n", "info")
-            elif "WARN" in line or "[WARN]" in line:
-                self.add_log_(f"{line}\n", "#FCF803",); box.insert("end", line + "\n", "warn")
-            else:
-                self.add_log_(f"{line}\n", "blue", "help"); box.insert("end", line + "\n")
-            
-            if self.save_state.get():
-                today = datetime.now().strftime("%Y-%m-%d"); path = f"Manager_log/{today}.txt"
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                with open(path, "a", encoding="utf-8") as f:
-                    f.write(f"{line}\n")
-            print(line); box.see("end"); box.config(state="disabled")
-    
-    def color_ch_(self):
-        if os.path.exists(self.CONFIG_PATH):
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                self.config = json.load(f)
-        else:
-            self.config = {}
-        
-        # グローバル変数に反映
-        self.username = self.config.get("username", "Unknown")
-        self.bg = self.config.get("bg", "#000000")
-        self.fg = self.config.get("fg", "#ffffff")
-        self.btn_color = self.config.get("btn_color", "#444444")
-    
-    def gui_(self):
-        self.frame_main, self.box_main, self.log_box = self.main_tab_(win)
-        self.show_frame(self.frame_main)
-        self.frame_credits = self.credits_tab_(win)
-        self.frame_mods = self.mods_tab_(win)
-        self.frame_plugins = self.plugins_tab_(win)
-        self.frame_setting = self.setting_tab_(win)
-        self.frame_help = self.help_tab_(win)
-        self.frame_Extensions = self.Extensions_tab_(win)
-        self.frame_more_setting = self.more_setting_(win)
-        
-        #main tab
-        self.btn_(win, "Main", command=lambda: self.show_frame(self.frame_main), bg=self.btn_color, fg=self.fg, layout_mode="place", x=0, y=0, width=100, height=20, relief="flat")
-        
-        #credits
-        self.btn_(win, "Credits", command=lambda: self.show_frame(self.frame_credits), bg=self.btn_color, fg=self.fg, layout_mode="place", x=101, y=0, width=100, height=20, relief="flat")
-        
-        #Mods
-        self.btn_(win, "Mods", command=lambda: self.show_frame(self.frame_mods), bg=self.btn_color, fg=self.fg, layout_mode="place", x=202, y=0, width=100, height=20, relief="flat")
-        
-        #plugins
-        self.btn_(win, "Plugins", command=lambda: self.show_frame(self.frame_plugins), bg=self.btn_color, fg=self.fg, layout_mode="place", x=303, y=0, width=100, height=20, relief="flat")
-        
-        #Settings
-        self.btn_(win, "Setting", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=404, y=0, width=100, height=20 ,relief="flat")
-        
-        #help
-        self.btn_(win,"Help", command=lambda: self.show_frame(self.frame_help), bg=self.btn_color, fg=self.fg, layout_mode="place", x=505, y=0, width=100, height=20, relief="flat")
-        
-        #Extensions
-        self.btn_(self.frame_setting, "拡張機能", command=lambda: self.show_frame(self.frame_Extensions), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=90, width=80, height=25)
-        
-        #その他の設定
-        self.btn_(self.frame_setting, "その他の設定", command=lambda: self.show_frame(self.frame_more_setting, ), bg=self.btn_color, fg=self.fg, font=("arial", 10), layout_mode="place", x=700, y=118, width=80, height=25)
-        #button
-        self.btn_(self.frame_setting, "GUI再起動", command=self.app_, bg=self.btn_color, fg="red", font=("arial", 10), layout_mode="place", x=758, y=410, width=150, height=25)
-        self.btn_(self.frame_setting, "コンフィグリセット", command=self.config_reset_, bg=self.btn_color, fg="red", layout_mode="place", x=758, y=440, width=150, height=25)
-        self.btn_(self.frame_main, "サーバー起動", command=self.start_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=0, y=2, width=100, height=20)
-        self.btn_(self.frame_main, "サーバー停止", command=self.stop_server_, bg=self.btn_color, fg=self.fg, relief="flat", layout_mode="place", x=101, y=2, width=100, height=20)
-        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("bg"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=260, width=60, height=20)
-        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("fg"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=300, width=60, height=20)
-        self.btn_(self.frame_setting, "選択", lambda: self.pick_color_("btn_color"), bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=340, width=60, height=20)
-    #tab
-    def main_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("Main",)
-        self.log_box_()
-        self.scrollbar_()
-        self.text_box = tk.Entry(self.frame, width=90, font=("arial", 15), bg=self.btn_color, fg=self.fg)
-        self.text_box.place(y=440, x=0)
-        self.text_box.bind("<Return>", self.on_enter)
-        self.text_box.bind("<Up>", self.clip_up_); self.text_box.bind("<Down>", self.clip_down_)
-        
-        self.log_boxes['main'] = self.log_box
-        return self.frame, self.text_box, self.log_box
-    
-    def credits_tab_(self, parent):
-        self.frame_(parent)
-        self.scrollbar_()
-        self.label_("Credits")
-        
-        credit = [
-        "この""ツールはminecraftサーバーを管理するために作られました。",
-        "Open AI chatgpt   Microsoft Copilot",
-        "との会話によって設計されました。",
-        "guiの設計などの情報をいただきました。",
-        "このツールはまだ未完成ですが",
-        "完成してもおそらくアップデートが続くでしょう。",
-        "作者のほしい機能などを搭載していきます。",
-        "できるだけ一つのファイルにしようと思っていますが"
-        "複数のファイル版も作成する予定です。",
-        "                    協力者:2                     テスター:1",
-        "Open AI chatgpt   Microsoft Copilot   MixPlus",
-        #"\n \n \nedit by MixPlus",
-    ]
-        self.label_("edit", fg="blue",  layout_mode="place", x=50, y=350)
-        self.label_("by", fg="#FFAA00", layout_mode="place", x=100, y=350)
-        self.label_("MixPlus", fg="#00FF00", x=140, y=350)
-        for i, line in enumerate(credit):
-            
-            self.label_(line, layout_mode="place", x=30, y=30 + i * 25)
-        return self.frame
-    
-    def mods_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("Mods List")
-        self.scrollbar_()
-        self.listbox_()
-        mods_path = os.path.join(self.current_dir, "mods")
-        if os.path.exists(mods_path):
-            for item in os.listdir(mods_path):
-                self.listbox.insert(tk.END, item)
-        else:
-            self.listbox.insert(tk.END, "modsフォルダが見つかりませんでした")
-        return self.frame
-    
-    def Extensions_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("Extensions List")
-        self.scrollbar_()
-        self.listbox_()
-        if os.path.exists(self.EXTENSIONS_PATH):
-            if self.EXTENSIONS_PATH.endswith('.py') and self.EXTENSIONS_PATH != "__init__.py":
-                for item in os.listdir(self.EXTENSIONS_PATH):
-                    self.listbox.insert(tk.END, item)
-        else:
-            self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
-        self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
-        
-        return self.frame
-    
-    def plugins_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("Plugin List")
-        self.scrollbar_()
-        self.listbox_()
-        plugins_path = os.path.join(self.current_dir, "plugins")
-        if os.path.exists(plugins_path):
-            if plugins_path.endswith('.py') and plugins_path != "__init__.py":
-                for item in os.listdir(plugins_path):
-                    self.listbox.insert(tk.END, item)
-        else:
-            self.listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
-        return self.frame
-    
-    def setting_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("設定")
+        if not os.path.exists(self.CONFIG_PATH):
+            self.config_dict = self.DEFAULT_CONFIG.copy()
+            self.save()
         
         try:
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                self.config = json.load(f)
-        except Exception:
-            self.config = {}
-        if not self.config.get("eula", False):
-            answer = messagebox.askyesno("Minecraft EULA", "Minecraft EULA (https://aka.ms/MinecraftEULA) に同意しますか？")
-            if not answer:
-                return
-            self.config["eula"] = True
+            with open(self.CONFIG_PATH, encoding="utf-8") as f:
+                self.config_dict = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            self._reset_config()
+        
+        self.server_jar = self.config_dict.get("server_jar", "")
+        self.min_ram = self.config_dict.get("min_ram", 10)
+        self.max_ram = self.config_dict.get("max_ram", 10)
+        self.slots = self.config_dict.get("slots", 20)
+        self.username = self.config_dict.get("username", "user")
+        self.bg = self.config_dict.get("bg", "black")
+        self.fg = self.config_dict.get("fg", "white")
+        self.btn_color = self.config_dict.get("btn_color", "#444444")
+        self.server_state = self.config_dict.get("server", None)
+        self.history_size = int(self.config_dict.get("history_size", 10))
+        self.eula = self.config_dict.get("eula", False)
+        self.debug = self.config_dict.get("debug", False)
+        self.reset = self.config_dict.get("reset", False)
+    
+    def save(self, key=None, data=None, cast=str):
+        if key is not None:
+            if not callable(cast):
+                raise TypeError("cast must be callable")
+            self.config_dict[key] = cast(data)
+            
         
         with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-            json.dump(self.config, f, indent=4, ensure_ascii=False)
-        
-        self.config = self.load_config_()
-        
-        
-        self.label_("サーバーJARファイル:", layout_mode="place", x=50, y=60)
-        self.jar_entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
-        self.jar_entry.insert(0, self.config.get("server_jar", ""))
-        self.jar_entry.place(x=250, y=60)
-        self.entries["server_jar"] = self.jar_entry
-        self.save_state = tk.BooleanVar(value=self.config.get("save_log", False))
-        self.label_("ログの自動保存", layout_mode="place", x=50, y=380)
-        self.save_log = tk.Button(self.frame, text="OFF", bg=self.bg, fg=self.fg, font=("arial", 12), command=self.save_toggle_, width=8)
-        self.save_log.place(x=250, y=380)
-        
-        self.btn_(self.frame, "参照", command=self.select_jar_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=700, y=58, width=80, height=25)
-        settings = [
-        ("最低RAM", "min_ram", 100),
-        ("最大RAM", "max_ram", 140),
-        ("スロット数", "slots", 180),
-        ("ユーザーネーム", "username", 220),
-        ("背景色", "bg", 260),
-        ("文字色", "fg", 300),
-        ("ボタンの色", "btn_color", 340),
-        
-        ]
-        
-        for text, key, y in settings:
-            self.label_(text, layout_mode="place", x=50, y=y)
-            entry = tk.Entry(self.frame, bg=self.btn_color, fg=self.fg, font=("arial", 12), width=40)
-            entry.insert(0, self.config.get(key, ""))
-            entry.place(x=250, y=y)
-            self.entries[key] = entry
-            
-            self.btn_(self.frame, "リセット", command=lambda k=key: self.reset_color_one_(k), bg=self.btn_color, fg=self.fg, layout_mode="place", x=620, y=y, width=70)
-        self.auto_sync_()
-        
-        
-        if self.config.get("eula", False):
-            self.agree_()
-        return self.frame
+            json.dump(self.config_dict, f, indent=4, ensure_ascii=False)
     
-    def help_tab_(self, parent):
-        self.frame_(parent)
-        self.label_("Help")
-        self.log_box_(x=0, y=30, width=900, height=438)
-        self.scrollbar_()
-        self.log_boxes['help'] = self.log_box
-        self.help_log_("help")
-        return self.frame
-    
-    def more_setting_(self, parent):
-        self.frame_(parent)
-        self.label_("他の設定")
-        self.btn_(self.frame, "←戻る", command=lambda: self.show_frame(self.frame_setting), bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=0, width=80, height=25)
-        values = list(range(1, 51))
-        self.clip_combo = ttk.Combobox(self.frame, values=values, state="readonly", width=10); self.clip_combo.set(self.clip_c)
+    def remove(self, key):
+        self.config_dict.pop(key, None)
         
-        self.label_("クリップ数", layout_mode="place", x=50, y=100)
-        self.clip_combo.place(x=250, y=100)
-        self.clip_combo.bind("<<ComboboxSelected>>", self.on_clip_change_)
-        #temp作成
-        self.btn_(self.frame, "temp作成", command=self.Generate_temp_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=825, y=30, width=80, height=25)
-        #backup
-        self.btn_(self.frame, "バックアップ", command=self.server_backup_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=30, width=100, height=25)
-        #update
-        if not getattr(sys, "frozen", False):
-            self.btn_(self.frame, "アップデート", command=self.updater.create_updater_, bg=self.btn_color, fg=self.fg, layout_mode="place", x=723, y=0, width=100, height=25)
-        self.auto_sync_()
-        return self.frame
+        with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
+            json.dump(self.config_dict, f, indent=4, ensure_ascii=False)
     
-    #機能
-    def apply_colors(self):
-        # ===== Frame =====
-        for f in getattr(self, "frames", []):
-            try:
-                f.configure(bg=self.bg)
-            except tk.TclError:
-                pass
-            
-        # ===== Label =====
-        for l in getattr(self, "labels", []):
-            try:
-                l.configure(bg=self.bg, fg=self.fg)
-            except tk.TclError:
-                pass
-            
-        # ===== Entry =====
-        for e in getattr(self, "entry_widgets", []):
-            try:
-                e.configure(
-                    bg=self.btn_color,
-                    fg=self.fg,
-                    insertbackground=self.fg,
-                    selectbackground=self.bg,
-                    selectforeground=self.fg
-                )
-            except tk.TclError:
-                pass
-            
-        # ===== Button =====
-        for b in getattr(self, "buttons", []):
-            try:
-                b.configure(
-                    bg=self.btn_color,
-                    fg=self.fg,
-                    activebackground=self.bg,
-                    activeforeground=self.fg,
-                    highlightbackground=self.bg
-                )
-            except tk.TclError:
-                pass
-            
-        # ===== Scrollbar =====
-        for s in getattr(self, "scrollbars", []):
-            try:
-                s.configure(
-                    bg=self.btn_color,
-                    troughcolor=self.bg,
-                    activebackground=self.fg,
-                    highlightbackground=self.bg
-                )
-            except tk.TclError:
-                pass
-            
-        # ===== Text (log_box_) =====
-        for t in getattr(self, "text_boxes", []):
-            try:
-                t.configure(
-                    bg=self.bg,
-                    fg=self.fg,
-                    insertbackground=self.fg,
-                    selectbackground=self.btn_color,
-                    selectforeground=self.fg
-                )
-            except tk.TclError:
-                pass
-            
-        # ===== Listbox (list_box_) =====
-        for lb in getattr(self, "listboxes", []):
-            try:
-                lb.configure(
-                    bg=self.bg,
-                    fg=self.fg,
-                    selectbackground=self.btn_color,
-                    selectforeground=self.fg,
-                    highlightbackground=self.bg
-                )
-            except tk.TclError:
-                pass
+    def _reset_config(self):
+        self.config_dict = self.DEFAULT_CONFIG.copy()
+        self.save()
+
+class MAIN:
+    def __init__(self, win):
+        global MAIN_INSTANCE
+        MAIN_INSTANCE = self
+        #class
+        self.CFG = Config()
+        self.tab = TAB(self.CFG, self,)
+        self.gui = GUI(win, self.CFG, self.tab, self)
+        self.win = win
+        self.context = AppContext(
+            c1=self.CFG,
+            c2=self,
+            c3=self.tab,
+            c4=self.gui
+        )
+        #path
+        self.BASE_DIR = (
+            os.path.dirname(sys.executable)
+            if getattr(sys, "frozen", False)
+            else os.path.dirname(os.path.abspath(__file__))
+        )
+        self.SERVER_DIR = os.path.join(self.BASE_DIR, "server")
+        self.BACKUP_DIR = os.path.join(self.BASE_DIR, "backup")
+        self.EXTENSIONS_PATH = os.path.join(self.BASE_DIR, "Extensions")
+        
+        os.makedirs(self.SERVER_DIR, exist_ok=True)
+        os.makedirs(self.BACKUP_DIR, exist_ok=True)
+        os.makedirs(self.EXTENSIONS_PATH, exist_ok=True)
+        
+        self.clip = deque(maxlen=self.CFG.history_size)
+        self.clip_index = 0
+        #log
+        self.log_boxes = {}
+        
+        self.server = None
+        
+        self.gui.run(self.load_extensions)
     
-    def reset_color_one_(self, key):
-        default = self.CONFIG.get(key)
-        if default is None:
+    def on_enter(self, event=None):
+        raw_cmd = self.tab.Entry_main.get()
+        if not raw_cmd:
             return
         
-        entry = self.entries.get(key)
-        if entry:
-            entry.delete(0, tk.END)
-            entry.insert(0, default)
-    
-    def pick_color_(self, key):
-        color = colorchooser.askcolor(title=f"{key} の色選択")
-        if not color[1]:
+        cmd = raw_cmd.strip()
+        if not cmd:
             return
         
-        entry = self.entries.get(key)
-        if entry:
-            entry.delete(0, tk.END)
-            entry.insert(0, color[1])
-        setattr(self, key, color[1])
-        self.apply_colors()
-    
-    def on_clip_change_(self, event=None):
-        self.clip_c = int(self.clip_combo.get())
-        self.clip = deque(self.clip, maxlen=self.clip_c)
+        self.add_log(f"<{self.CFG.username}> {cmd}", "#00FF1f"); self.send_command(cmd)
+        self.clip.append(cmd)
+        self.clip_index = 0
+        self.tab.Entry_main.delete(0, tk.END)
         
-        config = self.load_config_()
-        config["clip_c"] = self.clip_c
-        self.save_config_(config)
-    
-    def help_log_(self, tab):
-        self.add_log_("　　　　　　　　　　　　　　　　　　　　使い方", "#33FF00", tab=tab)
-        self.add_log_("1,　　起動できたらSettingタブに移動して　好きに設定しよう!\n　　　サーバーJARファイルや最低最大RAM量を設定してね!", tab=tab)
-        self.add_log_("　　　注意だけど不正な値は入力しないようにね! [RAM設定でinfiniteなど]", "red", tab=tab)
-        self.add_log_("　　　このソフト用のニックネームも決められるよ\n　　　背景色　文字色　ボタンの色を変更できるよ\n　　　変更後は再起動ボタンを押してね\n", tab=tab)
-        self.add_log_("2,　　Mainタブに戻ってサーバー起動ボタンを押してね\n　　　サーバーのファイルはこの.pyまたはexeがある場所に作られるよ", tab=tab)
-        self.add_log_("　　　サーバーはバックグラウンドで起動するよ\n　　　サーバーログも出てくるからね\n　　　テキストボックスでコマンドを送信するとサーバーにも反映されるよ", tab=tab)
-        self.add_log_("　　　/stopをテキストボックスで入力して送信してね\n", "yellow", tab=tab)
-        self.add_log_("　　　　　　　　　　　　　　　　　　　　タブの説明", "blue", tab=tab)
-        self.add_log_("1, 　　Mainタブ\n　　　Mainタブではサーバーの起動強制停止　サーバーにコマンド送信　ログの確認\n　　　が利用できます\n", tab=tab)
-        self.add_log_("2, 　　Creditはcreditがあります\n", tab=tab)
-        self.add_log_("3, 　　MODsタブはmodリスト\n", "", tab=tab)
-        self.add_log_("3, 　　Pluginタブはプラグインリスト\n", "", tab=tab)
+        parts = cmd.split()
+        if not parts:
+            return
         
-        self.add_log_("----------------------------------------------------------------------ログ------------------------------------------------------------------------", "yellow", tab="help")
+        # custom commands
+        if parts[0] == "clip":
+            data = ", ".join(map(str, self.clip))
+            print(data)
+            self.add_log(data)
         
-        return
-    
-    def load_Extensions(self, window):
-        if self.config.get("server", False):
-            self.add_log_("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
+        elif cmd.startswith("."):
+            if self.server and self.server.stdin:
+                self.send_command(f"/say {cmd[1:]}")
+        
+        elif parts[0] in ("ver", "version"):
+            msg = f"ServerManager:{MAIN_VERSION}"
+            print(msg)
+            self.add_log(msg, "#0044FF")
+        
+        elif parts[0] == "clear":
+            self.clear_all()
+        
+        elif parts[0] == "server":
+            print(f"Server: {self.server}"); self.add_log(f"Server: {self.server}", "#FF00C8")
+        
+        # config / cfg
+        elif parts[0] in ("config", "cfg"):
             
-        
-        
-        if not os.path.exists(self.EXTENSIONS_PATH):
-            print(f"{self.EXTENSIONS_PATH} フォルダが存在しません")
-            return
-        
-        loaded_extensions = set()  # 重複ロード防止
-        
-        # インスタンスを builtins にセット
-        builtins.FUNC_INSTANCE = self
-        
-        for filename in os.listdir(self.EXTENSIONS_PATH):
-            if filename.endswith('.py') and filename != "__init__.py":
-                extension_name = filename[:-3]
+            if len(parts) < 2:
+                self.add_log("Usage: config <reset|view|set|remove>", "red")
+                return
+            
+            sub = parts[1]
+            
+            if sub == "reset":
+                self.CFG._reset_config()
+                self.add_log("Config reset", "red")
+            
+            elif sub in ("view", "json", "data"):
+                self.add_log(json.dumps(self.CFG.config_dict, indent=4))
+            
+            elif sub == "set":
+                if len(parts) < 5:
+                    self.add_log("Usage: config set <key> <value> <type>", "red")
+                    return
                 
-                if extension_name in loaded_extensions:  # すでにロード済みならスキップ
-                    continue
-                loaded_extensions.add(extension_name)
+                key = parts[2]
+                value_str = parts[3]
+                type_str = parts[4]
+                
+                CASTERS = {
+                    "int": int,
+                    "float": float,
+                    "str": str,
+                    "bool": lambda x: x if isinstance(x, bool) else str(x).lower() == "true",
+                }
+                
+                caster = CASTERS.get(type_str)
+                if not caster:
+                    self.add_log(f"Unknown type: {type_str}", "red")
+                    return
                 
                 try:
-                    self.add_log_(f"Loaded extension: {extension_name}", "green", "help")
-                    self.add_log_(f"Loaded extension: {extension_name}", "green")
-                    print(f"Loaded extension: {extension_name}")
-                    #file
-                    extension_module = importlib.import_module(f"Extensions.{extension_name}")
-                    
-                    # 拡張機能側に init_extension 関数があれば呼ぶ
-                    if hasattr(extension_module, "init_extension"):
-                        extension_module.init_extension()
-                    
-                except Exception as e:
-                    print(f"Error loading extension {extension_name}: {e}")
-                    self.add_log_(f"Error loading extension {extension_name}: {e}", "red", "help")
-                    self.add_log_(f"Error loading extension {extension_name}: {e}", "red", "main")
-    
-    def auto_sync_(self):
-        current = {}
-        # セーブ
-        try:
-            current = {k: e.get() for k, e in self.entries.items()}
-            #config save用
-            current["save_log"] = self.save_state.get()
-            current["server"] = self.server is not None
-            current["clip_c"] = self.clip_c
+                    value = caster(value_str)
+                except ValueError:
+                    self.add_log(f"Invalid value for type {type_str}", "red")
+                    return
+                
+                self.CFG.save(key, value, caster)
+                self.add_log(f"Config set: {key} = {value} ({type_str})", "green")
             
-            latest_config = self.load_config_()
-            if "eula" in latest_config:
-                current["eula"] = latest_config["eula"]
-            self.save_config_(current)
-            
-        except Exception as e:
-            print("自動保存エラー:", e)
-            self.add_log_(f"自動保存エラー:{e}")
+            elif sub == "remove":
+                if len(parts) < 3:
+                    self.add_log("Usage: config remove <key>", "red")
+                    return
+                key = parts[2]
+                self.CFG.remove(key)
         
-        # リロード
-        try:
-            latest = self.load_config_()
-            for k, e in self.entries.items():
-                latest_val = latest.get(k, "")
-                if e.get() != latest_val:
-                    e.delete(0, tk.END)
-                    e.insert(0, latest_val)
-            latest_save = latest.get("save_log", self.save_state.get())
-            if latest_save != self.save_state.get():
-                self.save_state.set(latest.get("save_log", False))
-                self.save_log.config(text="ON" if self.save_state.get() else "OFF")
-        except Exception as e:
-            print("自動リロードエラー:", e)
-            self.add_log_(f"自動リロードエラー:{e}")
-        
-        
-        #username = latest.get("username", "Unknown")  # ← グローバル変数として作る
-        
-        
-        # 5秒ごとに繰り返す
-        self.frame.after(500, self.auto_sync_)
+        elif parts[0] == "Extensions":
+            self.__Extensions__()
     
-    def select_jar_(self):
-        path = filedialog.askopenfilename(title="サーバーの .jar ファイルを選んでね", filetypes=[("Java Archive", "*.jar"), ("すべてのファイル", "*.*")])
-        if path:
-            self.jar_entry.delete(0, tk.END)
-            self.jar_entry.insert(0, path)
-            print("選ばれたファイル:", path)
-    
-    def save_toggle_(self):
-        self.save_state.set(not self.save_state.get())
-        self.save_log.config(text="ON" if self.save_state.get() else "OFF")
-        self.config["save_log"] = self.save_state.get()
-        self.save_config_(self.config)
-    
-    def agree_(self):
-        os.makedirs(self.SERVER_DIR, exist_ok=True)  # server フォルダがないとエラーになる
-        eula_path = os.path.join(self.SERVER_DIR, "eula.txt")
-        with open(eula_path, "w", encoding="utf-8") as f:
-            f.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA\n")
-            f.write("eula=true\n")
-    
-    def load_config_(self):
-        if not os.path.exists(self.CONFIG_PATH):
-            with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(self.CONFIG, f, indent=4, ensure_ascii=False)
-            return self.CONFIG
-        try:
-            with open(self.CONFIG_PATH, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            self.add_log_(f"設定ファイル読み込みエラー:{e}")
-            print("設定ファイル読み込みエラー:", e)
-            return self.CONFIG
-    
-    def save_config_(self, data):
-        try:
-            with open(self.CONFIG_PATH, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print("設定保存エラー:", e)
-            self.add_log_(f"設定保存エラー:{e}")
-    
-    def frame_(self, parent, bg=None, fg=None):
-        if not bg: bg = self.bg
-        if not fg: fg = self.fg
-        self.frame = tk.Frame(parent, bg=self.bg); self.frame.place(x=0, y=20, width=910, height=490)
-        self.frames.append(self.frame)
-    
-    def label_(self, text, bg=None, fg=None, layout_mode=None, x=None, y=None):
-        if not bg: bg = self.bg
-        if not fg: fg = self.fg
-        lbl = tk.Label(self.frame, text=text, bg=bg, fg=fg, font=("arial", 12))
-        self.labels.append(lbl)
-        # place
-        if layout_mode == "place":
-            lbl.place(x=x if x is not None else 0, y=y if y is not None else 0)
-            
-        # grid
-        elif layout_mode == "grid":
-            row = y if y is not None else 0
-            col = x if x is not None else 0
-            lbl.grid(row=row, column=col, padx=5, pady=5)
-            
-        # pack（デフォルト）
-        else:
-            lbl.pack(pady=0)
-            
-        return lbl
-    
-    def scrollbar_(self):
-        # Scrollbar作成
-        self.scrollbar_widget = tk.Scrollbar(self.frame, command=self.log_box.yview)
-        self.scrollbar_widget.place(x=890, y=30, height=400)
-        self.scrollbars.append(self.scrollbar_widget)
-        # log_box に scrollbar を紐付け
-        self.log_box.configure(yscrollcommand=self.scrollbar_widget.set)
-    
-    def log_box_(self, bg=None, fg=None, x=0, y=30, width=900, height=400):
-        if not bg: bg = self.bg
-        if not fg: fg = self.fg
-        self.log_box = tk.Text(self.frame, bg=self.bg, fg=self.fg, font=("arial", 12), state="disabled")
-        self.log_box.place(x=x, y=y, width=width, height=height)
-        if hasattr(self, "scrollbar_widget"):
-            self.log_box.configure(yscrollcommand=self.scrollbar_widget.set)
-        self.text_boxes.append(self.log_box)
-    
-    def listbox_(self, bg=None, fg=None, relief=None):
-        if not bg: bg = self.bg
-        if not fg: fg = self.fg
-        self.listbox = tk.Listbox(self.frame, font=("arial", 12), bg=bg, fg=fg)
-        self.listbox.config(yscrollcommand=self.scrollbar_widget.set)
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.listboxes.append(self.listbox)
-    
-    def btn_(self, iframe, text, command=None, bg=None, fg=None, layout_mode=None, x=None, y=None, width=100, height=20, font=("arial", 12), relief=None ):
-        if not bg: bg = self.bg
-        if not fg: fg = self.fg
-        butt = tk.Button(iframe, text=text, command=command, bg=bg, fg=fg, font=font, relief=relief)
-        self.buttons.append(butt)
-        
-        # place
-        if layout_mode == "place":
-            butt.place(x=x if x is not None else 0, y=y if y is not None else 0, width=width if width is not None else 0, height=height if height is not None else 0)
-            
-        # grid
-        elif layout_mode == "grid":
-            row = y if y is not None else 0
-            col = x if x is not None else 0
-            butt.grid(row=row, column=col, padx=5, pady=5)
-            
-        # pack（デフォルト）
-        else:
-            butt.pack(pady=0)
-            
-        return butt
-    
-    def add_log_(self, text, color=None, tab="main"):
+    def add_log(self, text, color=None, tab="main"):
         box = self.log_boxes.get(tab)
         if box is None:
             print(text)
@@ -999,198 +269,702 @@ class function__:
             box.insert("end", text + "\n", color)
         else:
             box.insert("end", text + "\n")
-            
+        
         box.see("end"); box.config(state="disabled")
     
-    def show_frame(self, frame):
-        frame.tkraise()
-    
-    def on_enter(self, event=None):
-        cmd = self.text_box.get().strip()
-        if not cmd: return
+    def clip_up(self, event):
+        if not self.clip:
+            return "break"
         
-        self.clip.append(cmd); self.clip_index = 0
-        
-        self.add_log_(f"<{self.username}> {cmd}", "#00FF1f"); self.send_command_(cmd)
-        
-        #custom command
-        if "server" in cmd:
-            print(f"Server: {self.server}"); self.add_log_(f"Server: {self.server}", "#FF00C8")
-        
-        elif "help" in cmd:
-            self.help_log_("main")
-        
-        elif cmd.startswith("."):
-            tell_cmd = f"/say {cmd[1:]}"
-            if self.server and self.server.stdin:
-                self.server.stdin.write(tell_cmd + "\n"); self.server.stdin.flush()
-            self.add_log_(f"<{self.username}> {tell_cmd}", "#00FF1f")
-        
-        elif "command" in cmd or "cmd" in cmd:
-            print(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される\nclip: クリップを表示\nclip: クリップを表示\nclear: ログとクリップを削除")
-            self.add_log_(f"server: サーバーの状態\nhelp: このプロジェクトのhelp\n.: .好きなメッセージ　これでサーバーに送信される", None, "help\nclip: クリップを表示\nclear: ログとクリップを削除")
-        
-        elif "clip" in cmd:
-            print(", ".join(self.clip)); self.add_log_(", ".join(self.clip))
-        
-        elif "clear" in cmd:
-            self.clear_all_()
-        
-        elif "ver" in cmd or "version" in cmd:
-            print(rf"ServerManager:{MAIN_VERSION}")
-            self.add_log_(rf"ServerManager:{MAIN_VERSION}", "#0044FF")
-        
-        # 入力欄クリア
-        self.text_box.delete(0, tk.END)
-    
-    def clip_up_(self, event):
-        if not self.clip: return "break"
         if self.clip_index < len(self.clip):
             self.clip_index += 1
-        self.text_box.delete(0, tk.END)
-        self.text_box.insert(0, self.clip[-self.clip_index])
+            
+        self.tab.Entry_main.delete(0, tk.END)
+        self.tab.Entry_main.insert(0, self.clip[-self.clip_index])
+        
         return "break"
     
     def clip_down_(self, event):
         if not self.clip:
             return "break"
+        
         if self.clip_index > 1:
             self.clip_index -= 1
-            self.text_box.delete(0, tk.END)
-            self.text_box.insert(0, self.clip[-self.clip_index])
+            self.tab.Entry_main.delete(0, tk.END)
+            self.tab.Entry_main.insert(0, self.clip[-self.clip_index])
         else:
+            # 最新（入力なし状態）に戻る
             self.clip_index = 0
-            self.text_box.delete(0, tk.END)
+            self.tab.Entry_main.delete(0, tk.END)
+            
         return "break"
     
-    def clear_all_(self):
-        # 履歴クリア
+    def clear_all(self):
         self.clip.clear()
         self.clip_index = 0
         
-        # 入力欄クリア
-        self.text_box.delete(0, tk.END)
+        self.tab.Entry_main.delete(0, tk.END)
         
-        # log_boxes クリア
-        for box in self.log_boxes.values():
+        for box in self.tab.text:
             box.config(state="normal")
             box.delete("1.0", tk.END)
             box.config(state="disabled")
-            
-        self.add_log_("削除されました", "red")
-        self.help_log_("help")
+        self.add_log("削除されました", "red")
+        self.add_log(self.tab.credit, None, "credit")
+        self.add_log("edit by MixPlus", "#00FFFF", "credit")
     
-    def clear_box_(self, event):
-        self.pressed.add(event.keysym)
-        if "F3" in self.pressed and event.keysym.lower() == "d":
-            self.clear_all_()
+    def read_output(self):
+        box = self.log_boxes.get("main")  # mainタブのログボックスを使う
+        if not box:
             return
-    
-    def key_release_(self, event):
-        self.pressed.discard(event.keysym)
-    
-    def app_(self):
-        print("再起動します。"); exe = sys.executable; script = os.path.abspath(sys.argv[0])
-        subprocess.Popen([exe, script]); self.win.destroy()  # 新しいプロセスを起動 停止
-        return
-    
-    def config_reset_(self):
-        self.fix_(); self.app_(); return self.fix_, self.app_
-    
-    def Generate_temp_(self,):
-        print("テンプレートを作成しました")
-        self.add_log_("テンプレートを作成しました", "#002AFA"); path = os.path.join(self.EXTENSIONS_PATH, "temp.py")
-        temp = f"""
-#temp Extensions
-# Extensions/temp.py
-import builtins
-from ServerManager{MAIN_VERSION} import function__
-
-id = "temp"
-
-manager: "function__" = builtins.FUNC_INSTANCE
-
-
-def show_temp_frame():
-    # フレーム作成
-    manager.frame_(manager.win)
-    manager.label_("Temp Frame")
-    manager.log_box_()
-    manager.scrollbar_()
-    
-    # temp タブとして登録
-    manager.log_boxes["temp"] = manager.log_box
-    
-    # フレーム表示
-    manager.show_frame(manager.frame)
-    
-    # ログ出力
-    manager.add_log_("temp frame!", "blue", "temp")
-
-
-# ボタン追加（Main などに置く）
-manager.btn_(manager.win, "Temp", command=show_temp_frame, bg=manager.btn_color, fg=manager.fg,)
-"""
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(temp)
-    
-    def _resolve_paths_(self):
-        if getattr(sys, "frozen", False):
-            base_dir = os.path.dirname(sys.executable)
-        else:
-            base_dir = os.path.dirname(__file__)
-            
-        config_path = os.path.join(base_dir, "config.json")
-        extensions_path = os.path.join(base_dir, "Extensions")
-        server_dir = os.path.join(base_dir, "server")
-        backup = server_dir  # 元の self.backup 用
-        backup_dir = os.path.join(base_dir, "backup")
         
-        return config_path, extensions_path, server_dir, backup, backup_dir
+        box.tag_config("error", foreground="red"); box.tag_config("info", foreground="cyan")
+        for line in iter(self.server.stdout.readline, ''):
+            line = line.strip()
+            if "Yggdrasil Key Fetcher/ERROR" in line:
+                self.add_log(line, "red")
+                box.insert("end", line + "\n", "error")
+                continue
+            if line.startswith("at "):
+                continue
+            
+            box.config(state="normal")
+            if "ERROR" in line or "Exception" in line:
+                    self.add_log(f"{line}\n", "red", "help"); box.insert("end", line + "\n", "error")
+            elif "INFO" in line or "[INFO]" in line:
+                self.add_log(f"{line}\n", "white", "help"); box.insert("end", line + "\n", "info")
+            elif "WARN" in line or "[WARN]" in line:
+                self.add_log(f"{line}\n", "#FCF803",); box.insert("end", line + "\n", "warn")
+            else:
+                self.add_log(f"{line}\n", "blue", "help"); box.insert("end", line + "\n")
+            
+            print(line); box.see("end"); box.config(state="disabled")
     
-    def server_backup_(self):
-        shutil.copytree(self.backup, self.backup_dir, dirs_exist_ok=True)
-        print("Backup created:", self.backup_dir)
-        self.add_log_(f"Backup created:{self.backup_dir}")
+    def server_start(self):
+        if self.server is not None:
+            print("[WARN] すでにサーバーが起動しています。"); self.add_log("[WARN] すでにサーバーが起動しています。")
+            return
+        
+        elif not os.path.exists(self.CFG.CONFIG_PATH):
+            print("[ERROR] config.json が見つかりません。"); self.add_log("[ERROR] config.json が見つかりません。")
+            return
+        
+        if not self.CFG.server_jar or not os.path.exists(self.CFG.server_jar):
+            print("[ERROR] サーバーjarファイルが見つかりません。")
+            self.add_log("[ERROR] サーバーjarファイルが見つかりません。", "red")
+            return
+        
+        print(f"[INFO] サーバーを起動します: {self.CFG.server_jar}")
+        print(f"[INFO] RAM設定: min={self.CFG.min_ram}GB, max={self.CFG.max_ram}GB")
+        self.add_log(f"[INFO] サーバーを起動します: {self.CFG.server_jar}")
+        self.add_log(f"[INFO] RAM設定: min={self.CFG.min_ram}GB, max={self.CFG.max_ram}")
+        
+        self.server = subprocess.Popen(
+            ["java", f"-Xmx{self.CFG.max_ram}G", f"-Xms{self.CFG.min_ram}G", "-jar", self.CFG.server_jar, "nogui"],
+            cwd=self.SERVER_DIR,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            bufsize=1
+        )
+        threading.Thread(target=self.read_output, daemon=True).start()
+        self.CFG.save("server", True, bool)
+    
+    def stop_server(self):
+        if self.server is None:
+            self.add_log("[WARN] サーバーは起動していません。", "yellow")
+            return
+        
+        try:
+            self.send_command("/stop")
+            self.add_log("[INFO] サーバーを停止中...", "red")
+            self.win.after(10000, self.server.terminate)  # OK
+            self.add_log("[INFO] サーバーを停止しました。", "yellow")
+        except Exception as e:
+            self.add_log(f"[ERROR] サーバー停止に失敗: {e}")
+        finally:
+            self.server = None
+            self.CFG.save("server", False, bool)
+    
+    def send_command(self, cmd: str):
+        if cmd.startswith("/"):
+            if self.server and self.server.stdin:
+                self.server.stdin.write(cmd + "\n"); self.server.stdin.flush(); print(f"[cmd] {cmd}")
+            else:
+                print("[WARN] サーバーが起動していません。")
+                self.add_log("[WARN] サーバーは起動していません。", "yellow")
+    
+    def server_backup(self):
+        print(datetime.now())
+        BACKUP_DIR = os.path.join(self.BACKUP_DIR, datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
+        shutil.copytree(self.SERVER_DIR, BACKUP_DIR, dirs_exist_ok=True)
+        print("Backup created:", BACKUP_DIR)
+        self.add_log(f"Backup created:{BACKUP_DIR}")
         messagebox.showinfo("情報", "バックアップが完了しました")
     
-    def generate_init(self, base_dir):
-        base_dir = os.path.abspath(base_dir)
+    def load_extensions(self):
+            path = self.EXTENSIONS_PATH
+            
+            for file in os.listdir(path):
+                if not file.endswith(".py"):
+                    continue
+                if file.startswith("_"):
+                    continue
+                
+                full = os.path.join(path, file)
+                name = f"ext_{file[:-3]}"  # 衝突回避
+                
+                try:
+                    spec = importlib.util.spec_from_file_location(name, full)
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    
+                    if hasattr(mod, "apply"):
+                        mod.apply(self.context)
+                        self.add_log(f"[EXT] loaded: {file}", "cyan")
+                    else:
+                        self.add_log(f"[EXT] skip (no apply): {file}", "yellow")
+                    
+                except Exception:
+                    self.add_log(f"[EXT] error: {file}", "red")
+                    traceback.print_exc()
+
+class TAB:
+    def __init__(self, cfg, main):
+        self.main = main
+        self.CFG = cfg
         
-        for root, dirs, files in os.walk(base_dir):
-            # exeより深いフォルダだけ対象
-            if os.path.abspath(root) == base_dir:
-                continue
-            
-            # .py ファイルがなければスキップ
-            py_files = [f for f in files if f.endswith(".py")]
-            if not py_files:
-                continue
-            
-            # __pycache__ はスキップ
-            if "__pycache__" in root:
-                continue
-            
-            # __init__.py がなければ作成
-            init_path = os.path.join(root, "__init__.py")
-            if not os.path.exists(init_path):
-                open(init_path, "w", encoding="utf-8").close()
+        # 見た目制御用（色変更）
+        self.frames = []
+        self.labels = []
+        self.buttons = []
+        self.scrollbars = []
+        self.entry = []
+        self.text = []
+        self.listboxes = []
+        self.Scale = []
     
-    def none_(self):
-        print("機能がありません"); return None
+    def main_tab(self, parent):
+        frame_main = tk.Frame(parent, bg=self.CFG.bg); frame_main.place(x=0, y=20, width=910, height=490)
+        main_label = tk.Label(frame_main, text="Main", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); main_label.pack()
+        
+        self.log_main = tk.Text(
+            frame_main,
+            bg=self.CFG.bg, fg=self.CFG.fg,
+            font=("arial", 12), state="disabled"); self.log_main.place(x=0, y=30, width=900, height=405)
+        
+        scroll = tk.Scrollbar(frame_main, command=self.log_main.yview); scroll.place(x=890, y=30, height=400)
+        self.log_main.config(yscrollcommand=scroll.set)
+        
+        self.Entry_main = tk.Entry(frame_main, width=90, font=("arial", 15), bg=self.CFG.btn_color, fg=self.CFG.fg); self.Entry_main.place(y=440, x=0)
+        
+        server_btn = tk.Button(frame_main, text="start server", command=self.main.server_start, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 12), relief="flat") ; server_btn.place(x=0, y=2, width=100, height=20)
+        stop_server_btn = tk.Button(frame_main, text="stop server", command=self.main.stop_server, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 12), relief="flat") ; stop_server_btn.place(x=101, y=2, width=100, height=20)
+        
+        #setting
+        self.frames.append(frame_main)
+        self.labels.append(main_label)
+        self.text.append(self.log_main)
+        self.scrollbars.append(scroll)
+        self.entry.append(self.Entry_main)
+        self.buttons.extend([server_btn, stop_server_btn])
+        
+        self.Entry_main.bind("<Return>", self.main.on_enter)
+        self.Entry_main.bind("<Up>", self.main.clip_up)
+        self.Entry_main.bind("<Down>", self.main.clip_down_)
+        self.main.log_boxes['main'] = self.log_main
+        return frame_main, main_label
+    
+    def credit_tab(self, parent):
+        frame_credit = tk.Frame(parent, bg=self.CFG.bg); frame_credit.place(x=0, y=20, width=910, height=490)
+        credit_label = tk.Label(frame_credit, text="Credit", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); credit_label.pack()
+        
+        log_credit = tk.Text(
+            frame_credit,
+            bg=self.CFG.bg, fg=self.CFG.fg,
+            font=("arial", 12), state="disabled"); log_credit.place(x=0, y=30, width=900, height=400)
+        
+        scroll = tk.Scrollbar(frame_credit, command=log_credit.yview); scroll.place(x=890, y=30, height=400)
+        log_credit.config(yscrollcommand=scroll.set)
+        
+        self.main.log_boxes['credit'] = log_credit
+        self.import_list = """
+import tkinter as tk
+import subprocess
+import webbrowser
+import threading
+import importlib
+import builtins
+import winsound
+import shutil
+import json
+import sys
+import os
+from tkinter import filedialog, messagebox, ttk
+from tkinter import colorchooser
+from collections import deque
+"""
+        
+        self.credit = f"""
+このツールはminecraftサーバーを管理するために作られました。
+Open AI chatgpt   Microsoft Copilot
+との会話によって設計されました。
+guiの設計などの情報をいただきました。
+このツールはまだ未完成ですが
+完成してもおそらくアップデートが続くでしょう。
+作者のほしい機能などを搭載していきます。
+できるだけ一つのファイルにしようと思っていますが複数のファイル版も作成する予定です。
+                    協力者:2                     テスター:1
+Open AI chatgpt   Microsoft Copilot   MixPlus
+
+利用したモジュール\n{self.import_list}
+
+
+
+"""
+        self.main.add_log(self.credit, None, "credit")
+        self.main.add_log("edit by MixPlus", "#00FFFF", "credit")
+        
+        self.frames.append(frame_credit)
+        self.labels.append(credit_label)
+        self.text.append(log_credit)
+        self.scrollbars.append(scroll)
+        return frame_credit, credit_label, log_credit, scroll
+    
+    def mods_tab(self, parent):
+        frame_mods = tk.Frame(parent, bg=self.CFG.bg); frame_mods.place(x=0, y=20, width=910, height=490)
+        mods_label = tk.Label(frame_mods, text="Mods", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); mods_label.pack()
+        
+        listbox = tk.Listbox(frame_mods, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll = tk.Scrollbar(frame_mods, command=listbox); scroll.place(x=890, y=30, height=400)
+        
+        listbox.config(yscrollcommand=scroll.set)
+        
+        mods_path = os.path.join(self.CFG.BASE_DIR, "server", "mods")
+        if os.path.exists(mods_path):
+            for item in os.listdir(mods_path):
+                listbox.insert(tk.END, item)
+        else:
+            listbox.insert(tk.END, "modsフォルダが見つかりませんでした")
+        self.frames.append(frame_mods)
+        self.labels.append(mods_label)
+        self.listboxes.append(listbox)
+        self.scrollbars.append(scroll)
+        return frame_mods
+    
+    def plugins_tab(self, parent):
+        frame_plugin = tk.Frame(parent, bg=self.CFG.bg); frame_plugin.place(x=0, y=20, width=910, height=490)
+        plugin_label = tk.Label(frame_plugin, text="Plugin", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); plugin_label.pack()
+        
+        listbox = tk.Listbox(frame_plugin, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll = tk.Scrollbar(frame_plugin, command=listbox); scroll.place(x=890, y=30, height=400)
+        
+        listbox.config(yscrollcommand=scroll.set)
+        
+        plugin_path = os.path.join(self.CFG.BASE_DIR, "server", "plugins")
+        if os.path.exists(plugin_path):
+            for item in os.listdir(plugin_path):
+                listbox.insert(tk.END, item)
+        else:
+            listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
+        self.frames.append(frame_plugin)
+        self.labels.append(plugin_label)
+        self.listboxes.append(listbox)
+        self.scrollbars.append(scroll)
+        return frame_plugin
+    
+    def setting_tab(self, parent):
+        self.frame_setting = tk.Frame(parent, bg=self.CFG.bg); self.frame_setting.place(x=0, y=20, width=910, height=490)
+        setting_label = tk.Label(self.frame_setting, text="Setting", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); setting_label.pack()
+        
+        reference = tk.Button(self.frame_setting, text="reference", command=self.select_jar, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); reference.place(x=700, y=58)
+        
+        settings = [
+        ("Server JAR File", "server_jar", 60),
+        ("Username", "username", 220),
+        ("background color", "bg", 260),
+        ("Text color", "fg", 300),
+        ("Button Color", "btn_color", 340),
+        ]
+        
+        settings_type = [
+            ("Minimum RAM", "min_ram", 100, "GB"),
+            ("Max RAM", "max_ram", 140, "GB"),
+            ("Number of slots", "slots", 180, None),
+        ]
+        
+        pick = [
+            ("bg", 260),
+            ("fg", 300),
+            ("btn_color", 340),
+        ]
+        
+        self.setting_entry_dict = {}
+        
+        for text, key, y in settings:
+            text_label = tk.Label(self.frame_setting, text=text, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 12))
+            text_label.place(x=50, y=y)
+            
+            self.setting_entry = tk.Entry(self.frame_setting, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 12), width=40)
+            self.setting_entry.insert(0, self.CFG.config_dict.get(key, ""))
+            self.setting_entry.place(x=250, y=y)
+            
+            self.setting_entry_dict[key] = self.setting_entry
+            # フォーカスを離したときに保存
+            self.setting_entry.bind("<FocusOut>", lambda e, k=key, ent=self.setting_entry: self.CFG.save(k, ent.get()))
+            
+            # reset ボタンも個別の Entry を渡す
+            reset = tk.Button(self.frame_setting, text="Rest", 
+                            command=lambda k=key, ent=self.setting_entry: self.reset_color_one(k, ent),
+                            bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10))
+            reset.place(x=620, y=y, width=70)
+            
+            self.labels.append(text_label)
+            self.entry.append(self.setting_entry)
+            self.buttons.append(reset)
+        
+        for text, key, y, unit in settings_type:
+            if unit is None:
+                unit = ""
+
+            default = int(self.CFG.DEFAULT_CONFIG.get(key, 10))
+
+            value_label = tk.Label(
+                self.frame_setting,
+                text=f"{default}{unit}",
+                font=("arial", 12),
+                bg=self.CFG.bg,
+                fg=self.CFG.fg
+            )
+            value_label.place(x=200, y=y)
+
+            text_label = tk.Label(
+                self.frame_setting,
+                text=text,
+                bg=self.CFG.btn_color,
+                fg=self.CFG.fg,
+                font=("arial", 12)
+            )
+            text_label.place(x=50, y=y)
+
+            scale = tk.Scale(
+                self.frame_setting,
+                from_=1,
+                to=50,
+                orient="horizontal",
+                font=("arial", 12),
+                showvalue=False,
+                bg=self.CFG.bg,
+                fg=self.CFG.fg,
+                command=lambda v, k=key, lbl=value_label, u=unit: (
+                    lbl.config(text=f"{v}{u}"),
+                    self.CFG.save(k, str(v))
+                )
+            )
+            scale.place(x=250, y=y, width=363)
+            scale.set(default)
+            
+            # Reset ボタン
+            reset_btn = tk.Button(
+                self.frame_setting,
+                text="Reset",
+                font=("arial", 10),
+                bg=self.CFG.btn_color,
+                fg=self.CFG.fg,
+                command=lambda s=scale, d=default, lbl=value_label, k=key, u=unit: (
+                    s.set(d),
+                    lbl.config(text=f"{d}{u}"),
+                    self.CFG.save(k, str(d))
+                )
+            )
+            reset_btn.place(x=620, y=y, width=70)
+            self.buttons.append(reset_btn)
+            self.labels.extend([value_label, text_label])
+        
+        for key, y in pick:
+            btn_pick = tk.Button(self.frame_setting, text="Select Color", command=lambda k=key: self.pick_color(k), bg=self.CFG.btn_color, fg=self.CFG.fg)
+            btn_pick.place(x=700, y=y)
+            self.buttons.append(btn_pick)
+        
+        self.frames.append(self.frame_setting)
+        self.labels.extend([setting_label, text_label])
+        self.entry.extend([self.setting_entry])
+        self.buttons.extend([reference, reset])
+        return self.frame_setting, reference
+    
+    def Extensions_tab(self, parent):
+        self.frame_Extension = tk.Frame(parent, bg=self.CFG.bg); self.frame_Extension.place(x=0, y=20, width=910, height=490)
+        label_Extension = tk.Label(self.frame_Extension, text="Extensions", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); label_Extension.pack()
+        
+        listbox = tk.Listbox(self.frame_Extension, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll = tk.Scrollbar(self.frame_Extension, command=listbox); scroll.place(x=890, y=30, height=400)
+        if os.path.exists(self.main.EXTENSIONS_PATH):
+            if self.main.EXTENSIONS_PATH.endswith('.py') and self.main.EXTENSIONS_PATH != "__init__.py":
+                for item in os.listdir(self.main.EXTENSIONS_PATH):
+                    listbox.insert(tk.END, item)
+        else:
+            listbox.insert(tk.END, "Extensionsフォルダが見つかりませんでした")
+        self.frames.append(self.frame_Extension)
+        self.labels.append(label_Extension)
+        self.listboxes.append(listbox)
+        self.scrollbars.append(scroll)
+        return self.frame_Extension
+    
+    def more_setting(self, parent):
+        self.frame_more = tk.Frame(parent, bg=self.CFG.bg); self.frame_more.place(x=0, y=20, width=910, height=490)
+        label_more = tk.Label(self.frame_more, text="More Settings", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); label_more.pack()
+        
+        backup = tk.Button(self.frame_more, text="backup", command=self.main.server_backup, bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); backup.place(x=723, y=30, width=100, height=25)
+        
+        max_clip = tk.Label(self.frame_more, text="Maximum Number of Clips", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); max_clip.place(x=50, y=60)
+        
+        value_label = tk.Label(
+                        self.frame_more,
+                        text=f"0",
+                        font=("arial", 12),
+                        bg=self.CFG.bg,
+                        fg=self.CFG.fg
+                    )
+        value_label.place(x=250, y=60)
+        
+        scale = tk.Scale(
+                        self.frame_more,
+                        from_=1,
+                        to=50,
+                        orient="horizontal",
+                        font=("arial", 12),
+                        showvalue=False,
+                        bg=self.CFG.bg,
+                        fg=self.CFG.fg,
+                        command=lambda v, k="history_size", lbl=value_label: (
+                            lbl.config(text=f"{v}"),
+                            self.CFG.save(k, str(v))
+                        )
+                    )
+        scale.place(x=250, y=60)
+        return self.frame_more
+    
+    def select_jar(self):
+        path = filedialog.askopenfilename(title="サーバーの .jar ファイルを選んでね", filetypes=[("Java Archive", "*.jar"), ("すべてのファイル", "*.*")])
+        if path:
+            box = self.setting_entry_dict.get("server_jar", "")
+            box.delete(0, tk.END)
+            box.insert(0, path)
+            self.CFG.save("server_jar", path)
+            print("選ばれたファイル:", path)
+    
+    def apply_colors(self):
+        for f in self.frames:
+            f.configure(bg=self.CFG.bg)
+        
+        for l in self.labels:
+            l.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+        
+        for e in self.entry:
+            e.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
+        
+        for t in self.text:
+            t.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+        
+        for b in self.buttons:
+            b.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
+        
+        for list in self.listboxes:
+            list.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+        
+        for Scale in self.Scale:
+            Scale.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+        
+        
+        if self.CFG.debug:
+            all_widgets = [self.frames, self.labels, self.entry, self.text, self.buttons]
+            for lst in all_widgets:
+                print(", ".join([str(x) for x in lst]))  # map より確実
+    
+    def reset_color_one(self, key, entry):
+        default = self.CFG.DEFAULT_CONFIG.get(key)
+        if default is None:
+            return
+        entry.delete(0, tk.END)
+        entry.insert(0, default)
+        self.CFG.save(key, default)
+    
+    def pick_color(self, key):
+        color = colorchooser.askcolor(title=f"Select the color of {key}")
+        if not color[1]:
+            return
+        
+        entry = self.setting_entry_dict[key]
+        if entry:
+            entry.delete(0, tk.END)
+            entry.insert(0, color[1])
+            setattr(self, key, color[1])
+            self.CFG.save(key, entry.get())
+            self.apply_colors()
+
+class GUI:
+    def __init__(self, win, cfg, tab, main):
+        self.main = main
+        self.tab = tab
+        self.CFG = cfg
+        self.after_ids = []
+        self.win = win; self.setting_gui()
+        self.eula()
+        
+        self.reload_config_loop()
+    
+    def setting_gui(self):
+        self.win.title(f"Server Manager")
+        self.win.geometry("910x490")
+        self.win.minsize(910, 490)
+        self.win.configure(bg=self.CFG.bg)
+        self.win.protocol("WM_DELETE_WINDOW", self.on_close)
+    
+    def show_frame(self, frame):
+        frame.tkraise()
+    
+    def run(self, load):
+        self.main_frame, _ = self.tab.main_tab(self.win)
+        self.credit_frame, _, _, _ = self.tab.credit_tab(self.win)
+        self.mods_frame = self.tab.mods_tab(self.win)
+        self.plugin_frame = self.tab.plugins_tab(self.win)
+        self.setting_frame, _ = self.tab.setting_tab(self.win)
+        self.Extension_frame = self.tab.Extensions_tab(self.win)
+        self.more_frame = self.tab.more_setting(self.win)
+        #button
+        return_btn = tk.Button(self.tab.frame_Extension, text="←Return", command=lambda: self.show_frame(self.setting_frame), bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); return_btn.place(x=845, y=0)
+        #restart
+        restart_btn = tk.Button(self.tab.frame_setting, text="Restart", command=self.app, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); restart_btn.place(x=855, y=445)#x=758, y=410
+        
+        
+        #main
+        btn_main = tk.Button(
+            self.win, text="Main",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.main_frame),
+            relief="flat", font=("arial", 12)); btn_main.place(x=0, y=0, width=100, height=20)
+        
+        #credit
+        btn_credit = tk.Button(
+            self.win, text="Credit",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.credit_frame),
+            relief="flat", font=("arial", 12)); btn_credit.place(x=101, y=0, width=100, height=20)
+        
+        #mods
+        btn_mods = tk.Button(
+            self.win, text="Mods",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.mods_frame),
+            relief="flat", font=("arial", 12)); btn_mods.place(x=202, y=0, width=100, height=20)
+        
+        #plugins
+        btn_plugins = tk.Button(
+            self.win, text="Plugins",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.plugin_frame),
+            relief="flat", font=("arial", 12)); btn_plugins.place(x=303, y=0, width=100, height=20)
+        
+        #setting
+        btn_setting = tk.Button(
+            self.win, text="Settings",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.setting_frame),
+            relief="flat", font=("arial", 12)); btn_setting.place(x=404, y=0, width=100, height=20)
+        
+        #Extension
+        btn_Extension = tk.Button(
+            self.tab.frame_setting, text="extensions",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.Extension_frame),
+            font=("arial", 10)); btn_Extension.place(x=700, y=90)
+        
+        #More Settings
+        btn_more = tk.Button(
+            self.tab.frame_setting, text="more settings",
+            bg=self.CFG.btn_color, fg=self.CFG.fg,
+            command=lambda: self.show_frame(self.more_frame),
+            font=("arial", 10)); btn_more.place(x=700, y=123)
+        
+        
+        self.tab.buttons.extend([
+            btn_main, btn_credit, btn_mods,
+            btn_plugins, btn_setting,
+            btn_Extension, return_btn,
+            btn_more, restart_btn])
+        
+        self.show_frame(self.main_frame)
+        
+        if self.CFG.server_state:
+            self.main.add_log("\n以前サーバーが起動したまま。停止した可能性があります\n", "red")
+        load()
+        self.win.mainloop()
+    
+    def reload_config_loop(self):
+        if not (self.win and self.win.winfo_exists()):
+            return
+        #color update
+        self.tab.apply_colors()
+        self.win.configure(bg=self.CFG.bg)
+        self.CFG.load()
+        
+        self.after_ids.append(self.win.after(1000, self.reload_config_loop))
+        return
+    
+    def eula(self):
+        if not self.CFG.eula:
+            self.win.withdraw()
+            beep()
+            answer = messagebox.askyesno(
+            "Minecraft EULA",
+            "Minecraft EULA (https://aka.ms/MinecraftEULA) に同意しますか？"
+        )
+            if answer:
+                self.CFG.save("eula", True, bool)
+                self.win.deiconify()
+            else:
+                webbrowser.open("https://aka.ms/MinecraftEULA")
+                sys.exit()
+        elif self.CFG.eula:
+            with open(self.CFG.EULA_PATH, "w", encoding="utf-8") as f:
+                f.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA\n")
+                f.write("eula=true\n")
+        
+        self.after_ids.append(self.win.after(5000, self.eula))
+    
+    def on_close(self):
+        self.main.stop_server()
+        for id in self.after_ids:
+            self.win.after_cancel(id)
+        self.after_ids.clear()
+        self.win.destroy()
+        sys.exit()
+        return
+    
+    def app(self, reset=False):
+        if reset:
+            self.cfg._reset_config()
+        exe = sys.executable; script = os.path.abspath(sys.argv[0])
+        subprocess.Popen([exe, script]); self.on_close()
+        return
+
+class AppContext:
+    def __init__(self, c1: Config, c2: MAIN, c3: TAB, c4: GUI):
+        self.c1 = c1
+        self.c2 = c2
+        self.c3 = c3
+        self.c4 = c4
 
 if __name__ == "__main__":
-    win = tk.Tk(); function = function__(win)
-    function.add_log_(f"{MAIN_VERSION}")
-    function.generate_init(function.BASE_DIR)
-    #起動など
-    function.gui_(); function.frame_main.lift(); function.load_Extensions(win); function.win.mainloop()
+    print(f'''
+pyinstaller --onefile "{__file__}"
 
-ServerManager = f'''
-pyinstaller --onefile ServerManager{MAIN_VERSION}.py
+pyinstaller --onefile --noconsole "{__file__}"
 
-pyinstaller --onefile --noconsole ServerManager{MAIN_VERSION}.py
-
-pyinstaller --onefile --icon=icon.ico ServerManager{MAIN_VERSION}.py
-'''; print(ServerManager)
+pyinstaller --onefile --icon=icon.ico "{__file__}"
+''')
+    win = tk.Tk()
+    main = MAIN(win)
