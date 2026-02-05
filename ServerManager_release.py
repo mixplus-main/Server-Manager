@@ -1,4 +1,5 @@
-MAIN_VERSION = "1_5_100"
+MAIN_VERSION = "1_5_101"
+
 import importlib.util
 import tkinter as tk
 import subprocess
@@ -11,7 +12,6 @@ import json
 import sys
 import os
 from tkinter import filedialog, messagebox
-from typing import Protocol
 from tkinter import colorchooser
 from collections import deque
 from datetime import datetime
@@ -131,10 +131,10 @@ class MAIN:
         self.gui = GUI(win, self.CFG, self.tab, self)
         self.win = win
         self.context = AppContext(
-            c1=self.CFG,
-            c2=self,
-            c3=self.tab,
-            c4=self.gui
+            cfg=self.CFG,
+            main=self,
+            tab=self.tab,
+            gui=self.gui
         )
         #path
         self.BASE_DIR = (
@@ -952,11 +952,11 @@ class GUI:
         return
 
 class AppContext:
-    def __init__(self, c1: Config, c2: MAIN, c3: TAB, c4: GUI):
-        self.c1 = c1
-        self.c2 = c2
-        self.c3 = c3
-        self.c4 = c4
+    def __init__(self, cfg: Config, main: MAIN, tab: TAB, gui: GUI):
+        self.cfg = cfg
+        self.main = main
+        self.tab = tab
+        self.gui = gui
 
 if __name__ == "__main__":
     print(f'''
