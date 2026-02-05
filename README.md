@@ -177,36 +177,9 @@ Layout behavior:
 ---
 
 ## Minimal Extension Example
-```
-Extensions/temp.py
 
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from ServerManager1_4_0 import AppContext
 
-def apply(ctx: "AppContext"):
-    def show_temp_frame():
-        frame = ctx.gui.frame(ctx.main.win)
-        ctx.gui.label("Temp Frame")
-
-        log = ctx.gui.log_box()
-        ctx.gui.scrollbar()
-
-        ctx.main.log_boxes["temp"] = log
-        ctx.tab.show(frame)
-
-        ctx.main.add_log("temp frame!", "blue", "temp")
-
-    ctx.gui.btn(
-        ctx.gui.frame_main,
-        "Temp",
-        command=show_temp_frame,
-        bg=ctx.config.btn_color,
-        fg=ctx.config.fg
-    )
-```
----
-
+[Templates](https://github.com/mixplus-main/Server-Manager/blob/main/Extensions/temp.py)
 ## Summary
 
 - Extensions control the existing GUI
