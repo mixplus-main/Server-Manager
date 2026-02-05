@@ -9,15 +9,6 @@ used when creating extensions for **ServerManager**.
 
 ## Basic Naming Rules
 
-- **Functions end with an underscore (`_`)**
-  - Examples:
-    - `btn_`
-    - `add_log_`
-    - `frame_`
-
-- **Classes end with double underscores (`__`)**
-  - Example:
-    - `function__`
 
 > Note:  
 > Some internal helper functions may not strictly follow this rule,  
