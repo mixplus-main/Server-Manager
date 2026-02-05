@@ -94,8 +94,6 @@ A log box must be registered before using this function.
 
 ---
 
-### others
-If you want to add buttons, labels, etc., please create them according to the tkinter library.
 
 ## Minimal Extension Example
 
@@ -112,3 +110,7 @@ If you want to add buttons, labels, etc., please create them according to the tk
 This framework is designed as a lightweight, safe plugin system.
 
 Edit by MixPlus
+
+### Others
+If you want to add buttons, labels, or other widgets, please create them using the standard tkinter API.
+
