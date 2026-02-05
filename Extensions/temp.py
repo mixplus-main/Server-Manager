@@ -1,17 +1,18 @@
+
 import tkinter as tk
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
-    from ServerManager_class import AppContext, MAIN, GUI, Config, TAB
+    from ServerManager import AppContext, MAIN, GUI, Config, TAB
 
 def apply(ctx: "AppContext"):
     t = Temp(ctx)
 
 class Temp:
     def __init__(self, ctx: "AppContext"):
-        self.main: "MAIN" = ctx.c2
-        self.gui: "GUI" = ctx.c4
-        self.CFG: "Config" = ctx.c1
-        self.tab: "TAB" = ctx.c3
+        self.main: "MAIN" = ctx.main
+        self.gui: "GUI" = ctx.gui
+        self.CFG: "Config" = ctx.cfg
+        self.tab: "TAB" = ctx.tab
         
         Temp_frame = tk.Button(self.main.win, text="Temp", command=self.Temp_tab, bg=self.CFG.btn_color, fg=self.CFG.fg)
         Temp_frame.pack()
