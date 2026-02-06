@@ -301,7 +301,7 @@ A log box must be registered before using this function.
 
 
 
-[Templates](https://github.com/mixplus-main/Server-Manager/blob/main/Extensions/temp.py)
+[Templates GitHub](https://github.com/mixplus-main/Server-Manager/blob/main/Extensions/temp.py)
 ## Summary
 
 - Extensions control the existing GUI
