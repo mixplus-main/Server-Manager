@@ -423,7 +423,7 @@ class MAIN:
                     
                     if hasattr(mod, "apply"):
                         load.append(file[:-3])
-                        self.add_log(f"[EXT] loaded: {', '.join(map(str, load))}", "cyan")
+                        self.add_log(f"[EXT] loaded: {file[:-3]}", "cyan")
                         mod.apply(self.context)
                     else:
                         self.add_log(f"[EXT] skip (no apply): {file}", "yellow")
