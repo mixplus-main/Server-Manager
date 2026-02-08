@@ -1,4 +1,4 @@
-MAIN_VERSION = "1_5_101"
+MAIN_VERSION = "1_5_104"
 
 import importlib.util
 import tkinter as tk
@@ -25,17 +25,14 @@ def beep():
 class Config:
     DEFAULT_CONFIG = {
     "server_jar": "",
-    "btn_color": "#444444",
+    "min_ram": 10,
+    "max_ram": 10,
+    "slots": 20,
     "username": "user",
     "bg": "black",
     "fg": "white",
+    "btn_color": "#444444",
     "history_size": 10,
-    "min_ram": "10",
-    "max_ram": "10",
-    "slots": "20",
-    "server": False,
-    "eula": False,
-    "debug": False,
     "reset": False
     }
     
@@ -100,6 +97,7 @@ class Config:
         self.eula = self.config_dict.get("eula", False)
         self.debug = self.config_dict.get("debug", False)
         self.reset = self.config_dict.get("reset", False)
+        self.Open_github = self.config_dict.get("Open_github", False)
     
     def save(self, key=None, data=None, cast=str):
         if key is not None:
@@ -407,11 +405,12 @@ class MAIN:
     
     def load_extensions(self):
             path = self.EXTENSIONS_PATH
+            load = []
             
             for file in os.listdir(path):
                 if not file.endswith(".py"):
                     continue
-                if file.startswith("_"):
+                if file.startswith("_") or file.startswith("."):
                     continue
                 
                 full = os.path.join(path, file)
@@ -423,13 +422,14 @@ class MAIN:
                     spec.loader.exec_module(mod)
                     
                     if hasattr(mod, "apply"):
+                        load.append(file[:-3])
+                        self.add_log(f"[EXT] loaded: {', '.join(map(str, load))}", "cyan")
                         mod.apply(self.context)
-                        self.add_log(f"[EXT] loaded: {file}", "cyan")
                     else:
                         self.add_log(f"[EXT] skip (no apply): {file}", "yellow")
                     
-                except Exception:
-                    self.add_log(f"[EXT] error: {file}", "red")
+                except Exception as e:
+                    self.add_log(f"[EXT] error: {file}\n{e}", "red")
                     traceback.print_exc()
 
 class TAB:
@@ -446,9 +446,16 @@ class TAB:
         self.text = []
         self.listboxes = []
         self.Scale = []
+        
+        #frameの重複防止
+        self.frame_dict = {}
     
     def main_tab(self, parent):
-        frame_main = tk.Frame(parent, bg=self.CFG.bg); frame_main.place(x=0, y=20, width=910, height=490)
+        if "frame_main" not in self.frames or not self.frames["frame_main"].winfo_exists():
+            frame_main = tk.Frame(parent, bg=self.CFG.bg); frame_main.place(x=0, y=20, width=910, height=490)
+            self.frames.append(frame_main)
+            self.frame_dict["main"] = frame_main
+        
         main_label = tk.Label(frame_main, text="Main", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); main_label.pack()
         
         self.log_main = tk.Text(
@@ -465,7 +472,6 @@ class TAB:
         stop_server_btn = tk.Button(frame_main, text="stop server", command=self.main.stop_server, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 12), relief="flat") ; stop_server_btn.place(x=101, y=2, width=100, height=20)
         
         #setting
-        self.frames.append(frame_main)
         self.labels.append(main_label)
         self.text.append(self.log_main)
         self.scrollbars.append(scroll)
@@ -479,7 +485,11 @@ class TAB:
         return frame_main, main_label
     
     def credit_tab(self, parent):
-        frame_credit = tk.Frame(parent, bg=self.CFG.bg); frame_credit.place(x=0, y=20, width=910, height=490)
+        if "frame_credit" not in self.frames or not self.frames["frame_credit"].winfo_exists():
+            frame_credit = tk.Frame(parent, bg=self.CFG.bg); frame_credit.place(x=0, y=20, width=910, height=490)
+            self.frames.append(frame_credit)
+            self.frame_dict["frame_credit"] = frame_credit
+        
         credit_label = tk.Label(frame_credit, text="Credit", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); credit_label.pack()
         
         log_credit = tk.Text(
@@ -491,22 +501,6 @@ class TAB:
         log_credit.config(yscrollcommand=scroll.set)
         
         self.main.log_boxes['credit'] = log_credit
-        self.import_list = """
-import tkinter as tk
-import subprocess
-import webbrowser
-import threading
-import importlib
-import builtins
-import winsound
-import shutil
-import json
-import sys
-import os
-from tkinter import filedialog, messagebox, ttk
-from tkinter import colorchooser
-from collections import deque
-"""
         
         self.credit = f"""
 このツールはminecraftサーバーを管理するために作られました。
@@ -520,22 +514,23 @@ guiの設計などの情報をいただきました。
                     協力者:2                     テスター:1
 Open AI chatgpt   Microsoft Copilot   MixPlus
 
-利用したモジュール\n{self.import_list}
-
 
 
 """
         self.main.add_log(self.credit, None, "credit")
         self.main.add_log("edit by MixPlus", "#00FFFF", "credit")
         
-        self.frames.append(frame_credit)
         self.labels.append(credit_label)
         self.text.append(log_credit)
         self.scrollbars.append(scroll)
         return frame_credit, credit_label, log_credit, scroll
     
     def mods_tab(self, parent):
-        frame_mods = tk.Frame(parent, bg=self.CFG.bg); frame_mods.place(x=0, y=20, width=910, height=490)
+        if "frame_mods" not in self.frames or not self.frames["frame_mods"].winfo_exists():
+            frame_mods = tk.Frame(parent, bg=self.CFG.bg); frame_mods.place(x=0, y=20, width=910, height=490)
+            self.frames.append(frame_mods)
+            self.frame_dict["frame_mods"] = frame_mods
+        
         mods_label = tk.Label(frame_mods, text="Mods", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); mods_label.pack()
         
         listbox = tk.Listbox(frame_mods, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -549,14 +544,18 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                 listbox.insert(tk.END, item)
         else:
             listbox.insert(tk.END, "modsフォルダが見つかりませんでした")
-        self.frames.append(frame_mods)
+        
         self.labels.append(mods_label)
         self.listboxes.append(listbox)
         self.scrollbars.append(scroll)
         return frame_mods
     
     def plugins_tab(self, parent):
-        frame_plugin = tk.Frame(parent, bg=self.CFG.bg); frame_plugin.place(x=0, y=20, width=910, height=490)
+        if "frame_plugin" not in self.frames or not self.frames["frame_plugin"].winfo_exists():
+            frame_plugin = tk.Frame(parent, bg=self.CFG.bg); frame_plugin.place(x=0, y=20, width=910, height=490)
+            self.frames.append(frame_plugin)
+            self.frame_dict["frame_plugin"] = frame_plugin
+        
         plugin_label = tk.Label(frame_plugin, text="Plugin", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); plugin_label.pack()
         
         listbox = tk.Listbox(frame_plugin, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -570,17 +569,22 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                 listbox.insert(tk.END, item)
         else:
             listbox.insert(tk.END, "pluginsフォルダが見つかりませんでした")
-        self.frames.append(frame_plugin)
+        
         self.labels.append(plugin_label)
         self.listboxes.append(listbox)
         self.scrollbars.append(scroll)
         return frame_plugin
     
     def setting_tab(self, parent):
-        self.frame_setting = tk.Frame(parent, bg=self.CFG.bg); self.frame_setting.place(x=0, y=20, width=910, height=490)
+        if "self.frame_setting" not in self.frames or not self.frames["self.frame_setting"].winfo_exists():
+            self.frame_setting = tk.Frame(parent, bg=self.CFG.bg); self.frame_setting.place(x=0, y=20, width=910, height=490)
+            self.frames.append(self.frame_setting)
+            self.frame_dict["self.frame_setting"] = self.frame_setting
+        
         setting_label = tk.Label(self.frame_setting, text="Setting", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); setting_label.pack()
         
         reference = tk.Button(self.frame_setting, text="reference", command=self.select_jar, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); reference.place(x=700, y=58)
+        
         
         settings = [
         ("Server JAR File", "server_jar", 60),
@@ -629,9 +633,9 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
         for text, key, y, unit in settings_type:
             if unit is None:
                 unit = ""
-
-            default = int(self.CFG.DEFAULT_CONFIG.get(key, 10))
-
+                
+            default = self.CFG.config_dict.get(key)
+            
             value_label = tk.Label(
                 self.frame_setting,
                 text=f"{default}{unit}",
@@ -640,7 +644,7 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                 fg=self.CFG.fg
             )
             value_label.place(x=200, y=y)
-
+            
             text_label = tk.Label(
                 self.frame_setting,
                 text=text,
@@ -649,7 +653,7 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                 font=("arial", 12)
             )
             text_label.place(x=50, y=y)
-
+            
             scale = tk.Scale(
                 self.frame_setting,
                 from_=1,
@@ -659,13 +663,14 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                 showvalue=False,
                 bg=self.CFG.bg,
                 fg=self.CFG.fg,
-                command=lambda v, k=key, lbl=value_label, u=unit: (
-                    lbl.config(text=f"{v}{u}"),
-                    self.CFG.save(k, str(v))
-                )
+                command=lambda v, k=key, lbl=value_label, u=unit: self.on_scale(v, k, lbl, u)
             )
+            
             scale.place(x=250, y=y, width=363)
             scale.set(default)
+            self.Scale.append(scale)
+            
+            
             
             # Reset ボタン
             reset_btn = tk.Button(
@@ -689,14 +694,18 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
             btn_pick.place(x=700, y=y)
             self.buttons.append(btn_pick)
         
-        self.frames.append(self.frame_setting)
         self.labels.extend([setting_label, text_label])
         self.entry.extend([self.setting_entry])
         self.buttons.extend([reference, reset])
+        
         return self.frame_setting, reference
     
     def Extensions_tab(self, parent):
-        self.frame_Extension = tk.Frame(parent, bg=self.CFG.bg); self.frame_Extension.place(x=0, y=20, width=910, height=490)
+        if "self.frame_Extension" not in self.frames or not self.frames["self.frame_Extension"].winfo_exists():
+            self.frame_Extension = tk.Frame(parent, bg=self.CFG.bg); self.frame_Extension.place(x=0, y=20, width=910, height=490)
+            self.frames.append(self.frame_Extension)
+            self.frame_dict["self.frame_Extension"] = self.frame_Extension
+        
         label_Extension = tk.Label(self.frame_Extension, text="Extensions", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); label_Extension.pack()
         
         listbox = tk.Listbox(self.frame_Extension, font=("arial", 12), bg=self.CFG.bg, fg=self.CFG.fg); listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -707,6 +716,7 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                     listbox.insert(tk.END, item)
         else:
             listbox.insert(tk.END, "Extensionsフォルダが見つかりませんでした")
+        
         self.frames.append(self.frame_Extension)
         self.labels.append(label_Extension)
         self.listboxes.append(listbox)
@@ -714,12 +724,16 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
         return self.frame_Extension
     
     def more_setting(self, parent):
-        self.frame_more = tk.Frame(parent, bg=self.CFG.bg); self.frame_more.place(x=0, y=20, width=910, height=490)
+        if "self.frame_more" not in self.frames or not self.frames["self.frame_more"].winfo_exists():
+            self.frame_more = tk.Frame(parent, bg=self.CFG.bg); self.frame_more.place(x=0, y=20, width=910, height=490)
+            self.frames.append(self.frame_more)
+            self.frame_dict["self.frame_more"] = self.frame_more
+        
         label_more = tk.Label(self.frame_more, text="More Settings", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); label_more.pack()
         
         backup = tk.Button(self.frame_more, text="backup", command=self.main.server_backup, bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); backup.place(x=723, y=30, width=100, height=25)
         
-        max_clip = tk.Label(self.frame_more, text="Maximum Number of Clips", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); max_clip.place(x=50, y=60)
+        max_clip = tk.Label(self.frame_more, text="Maximum Number of Clips", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); max_clip.place(x=20, y=60)
         
         value_label = tk.Label(
                         self.frame_more,
@@ -728,23 +742,26 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
                         bg=self.CFG.bg,
                         fg=self.CFG.fg
                     )
-        value_label.place(x=250, y=60)
+        value_label.place(x=220, y=60)
         
         scale = tk.Scale(
                         self.frame_more,
-                        from_=1,
+                        from_=0,
                         to=50,
                         orient="horizontal",
                         font=("arial", 12),
                         showvalue=False,
                         bg=self.CFG.bg,
                         fg=self.CFG.fg,
-                        command=lambda v, k="history_size", lbl=value_label: (
-                            lbl.config(text=f"{v}"),
-                            self.CFG.save(k, str(v))
-                        )
+                        command=lambda v, k="history_size", lbl=value_label: (self.on_scale(v, k, lbl))
                     )
         scale.place(x=250, y=60)
+        scale.set(self.CFG.history_size)
+        
+        self.buttons.append(backup)
+        self.labels.extend([label_more, max_clip, value_label])
+        self.Scale.append(scale)
+        
         return self.frame_more
     
     def select_jar(self):
@@ -757,32 +774,36 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
             print("選ばれたファイル:", path)
     
     def apply_colors(self):
-        for f in self.frames:
-            f.configure(bg=self.CFG.bg)
-        
-        for l in self.labels:
-            l.configure(bg=self.CFG.bg, fg=self.CFG.fg)
-        
-        for e in self.entry:
-            e.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
-        
-        for t in self.text:
-            t.configure(bg=self.CFG.bg, fg=self.CFG.fg)
-        
-        for b in self.buttons:
-            b.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
-        
-        for list in self.listboxes:
-            list.configure(bg=self.CFG.bg, fg=self.CFG.fg)
-        
-        for Scale in self.Scale:
-            Scale.configure(bg=self.CFG.bg, fg=self.CFG.fg)
-        
-        
-        if self.CFG.debug:
-            all_widgets = [self.frames, self.labels, self.entry, self.text, self.buttons]
-            for lst in all_widgets:
-                print(", ".join([str(x) for x in lst]))  # map より確実
+        try:
+            for f in self.frames:
+                f.configure(bg=self.CFG.bg)
+            
+            for l in self.labels:
+                l.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+            
+            for e in self.entry:
+                e.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
+            
+            for t in self.text:
+                t.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+            
+            for b in self.buttons:
+                b.configure(bg=self.CFG.btn_color, fg=self.CFG.fg)
+            
+            for list in self.listboxes:
+                list.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+            
+            for Scale in self.Scale:
+                Scale.configure(bg=self.CFG.bg, fg=self.CFG.fg)
+            
+            
+            if self.CFG.debug:
+                all_widgets = [self.frames, self.labels, self.entry, self.text, self.buttons]
+                for lst in all_widgets:
+                    print(", ".join([str(x) for x in lst]))  # map より確実
+        except Exception as e:
+            print(f"Error {e}")
+            self.main.add_log(f"Error {e}")
     
     def reset_color_one(self, key, entry):
         default = self.CFG.DEFAULT_CONFIG.get(key)
@@ -804,6 +825,12 @@ Open AI chatgpt   Microsoft Copilot   MixPlus
             setattr(self, key, color[1])
             self.CFG.save(key, entry.get())
             self.apply_colors()
+    
+    def on_scale(self, v, key, lbl, unit=None):
+        if not unit:
+            unit = ""
+        lbl.config(text=f"{int(float(v))}{unit}")
+        self.CFG.save(key, int(float(v)))
 
 class GUI:
     def __init__(self, win, cfg, tab, main):
@@ -834,8 +861,10 @@ class GUI:
         self.setting_frame, _ = self.tab.setting_tab(self.win)
         self.Extension_frame = self.tab.Extensions_tab(self.win)
         self.more_frame = self.tab.more_setting(self.win)
+        
         #button
-        return_btn = tk.Button(self.tab.frame_Extension, text="←Return", command=lambda: self.show_frame(self.setting_frame), bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); return_btn.place(x=845, y=0)
+        return_ext = tk.Button(self.tab.frame_Extension, text="←Return", command=lambda: self.show_frame(self.setting_frame), bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); return_ext.place(x=845, y=0)
+        return_more = tk.Button(self.more_frame, text="←Return", command=lambda: self.show_frame(self.setting_frame), bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); return_more.place(x=845, y=0)
         #restart
         restart_btn = tk.Button(self.tab.frame_setting, text="Restart", command=self.app, bg=self.CFG.btn_color, fg=self.CFG.fg, font=("arial", 10)); restart_btn.place(x=855, y=445)#x=758, y=410
         
@@ -851,7 +880,10 @@ class GUI:
         btn_credit = tk.Button(
             self.win, text="Credit",
             bg=self.CFG.btn_color, fg=self.CFG.fg,
-            command=lambda: self.show_frame(self.credit_frame),
+            command=lambda: (
+                self.show_frame(self.credit_frame),
+                self.open_github()
+                ),
             relief="flat", font=("arial", 12)); btn_credit.place(x=101, y=0, width=100, height=20)
         
         #mods
@@ -893,8 +925,8 @@ class GUI:
         self.tab.buttons.extend([
             btn_main, btn_credit, btn_mods,
             btn_plugins, btn_setting,
-            btn_Extension, return_btn,
-            btn_more, restart_btn])
+            btn_Extension, return_ext,
+            return_more, btn_more, restart_btn])
         
         self.show_frame(self.main_frame)
         
@@ -928,10 +960,26 @@ class GUI:
             else:
                 webbrowser.open("https://aka.ms/MinecraftEULA")
                 sys.exit()
+        
         elif self.CFG.eula:
             with open(self.CFG.EULA_PATH, "w", encoding="utf-8") as f:
                 f.write("#By changing the setting below to TRUE you are indicating your agreement to our EULA\n")
                 f.write("eula=true\n")
+        
+        if "Open_github" not in self.CFG.config_dict:
+            self.win.withdraw()
+            beep()
+            github = messagebox.askyesno(
+                "Open github",
+                "creditをgithubで開きますか?"
+                )
+            if github:
+                self.CFG.save("Open_github", True, bool)
+                self.win.deiconify()
+            else:
+                self.CFG.save("Open_github", False, bool)
+                self.win.deiconify()
+            
         
         self.after_ids.append(self.win.after(5000, self.eula))
     
@@ -943,6 +991,12 @@ class GUI:
         self.win.destroy()
         sys.exit()
         return
+    
+    def open_github(self):
+        if self.CFG.Open_github:
+            webbrowser.open("https://github.com/mixplus-main/Server-Manager/blob/main/README.md")
+        else:
+            return
     
     def app(self, reset=False):
         if reset:
