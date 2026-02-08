@@ -29,18 +29,14 @@ class Temp:
         scroll = tk.Scrollbar(frame_temp, command=log_temp.yview); scroll.place(x=890, y=30, height=400)
         log_temp.config(yscrollcommand=scroll.set)
         
-        Entry_temp = tk.Entry(frame_temp, width=90, font=("arial", 15), bg=self.CFG.btn_color, fg=self.CFG.fg); Entry_temp.place(y=440, x=0)
         
         #setting
         self.tab.frames.append(frame_temp)
         self.tab.labels.append(temp_label)
         self.tab.text.append(log_temp)
         self.tab.scrollbars.append(scroll)
-        self.tab.entry.append(Entry_temp)
         
-        Entry_temp.bind("<Return>", self.main.on_enter)
-        Entry_temp.bind("<Up>", self.main.clip_up)
-        Entry_temp.bind("<Down>", self.main.clip_down_)
         self.main.log_boxes['temp'] = log_temp
-        self.main.add_log("Temp", "green", "temp")
+        for _ in range(100):
+            self.main.add_log("Temp", "green", "temp")
         return frame_temp, temp_label
