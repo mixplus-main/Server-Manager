@@ -18,7 +18,10 @@ class Temp:
         Temp_frame.pack()
     
     def Temp_tab(self):
-        frame_temp = tk.Frame(self.main.win, bg=self.CFG.bg); frame_temp.place(x=0, y=20, width=910, height=490)
+        if "frame_temp" not in self.tab.frames or not self.tab.frames["frame_temp"].winfo_exists():
+            frame_temp = tk.Frame(self.main.win, bg=self.CFG.bg); frame_temp.place(x=0, y=20, width=910, height=490)
+        
+        
         temp_label = tk.Label(frame_temp, text="Temp", bg=self.CFG.bg, fg=self.CFG.fg, font=("arial", 12)); temp_label.pack()
         
         log_temp = tk.Text(
